@@ -1,3 +1,5 @@
+import axios, { isAxiosError } from 'axios';
+
 export type AuthUser = {
   id: number;
   name: string;
@@ -29,6 +31,30 @@ export class ApiError extends Error {
 }
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+const isApiDebugEnabled = process.env.EXPO_PUBLIC_API_DEBUG === 'true';
+
+function redactSensitiveData(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return value.replace(/([?&](?:token|password|email)=)[^&]*/gi, '$1[REDACTED]');
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(redactSensitiveData);
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        /password|token|authorization|email/i.test(key)
+          ? '[REDACTED]'
+          : redactSensitiveData(nestedValue),
+      ]),
+    );
+  }
+
+  return value;
+}
 
 async function request<T>(
   path: string,
@@ -38,41 +64,72 @@ async function request<T>(
     throw new Error('URL API belum diatur. Isi EXPO_PUBLIC_API_URL pada file .env.');
   }
 
-  let response: Response;
+  const method = options.method ?? 'GET';
+  const url = `${apiBaseUrl}${path}`;
+
+  if (isApiDebugEnabled) {
+    console.info('[API] Request', {
+      method,
+      url,
+      body: redactSensitiveData(options.body),
+    });
+  }
+
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
-      method: options.method ?? 'GET',
+    const response = await axios.request<T>({
+      url,
+      method,
+      data: options.body,
       headers: {
         Accept: 'application/json',
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
       },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     });
-  } catch {
-    throw new Error(
-      'Tidak dapat terhubung ke backend. Periksa server dan EXPO_PUBLIC_API_URL di file .env.',
-    );
-  }
 
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error('Backend mengirim respons yang tidak dapat dibaca.');
-  }
+    if (isApiDebugEnabled) {
+      console.info('[API] Response', {
+        method,
+        url,
+        status: response.status,
+        data: redactSensitiveData(response.data),
+      });
+    }
 
-  if (!response.ok) {
-    const apiMessage: Partial<ApiMessage> =
-      payload !== null && typeof payload === 'object' ? (payload as Partial<ApiMessage>) : {};
-    const validationMessages = apiMessage.errors?.map((error) => error.message).filter(Boolean);
-    throw new ApiError(
-      validationMessages?.join('\n') || apiMessage.message || 'Permintaan ke backend gagal.',
-      response.status,
-    );
-  }
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      if (isApiDebugEnabled) {
+        console.info('[API] Error response', {
+          method,
+          url,
+          status: error.response?.status ?? null,
+          data: redactSensitiveData(error.response?.data),
+        });
+      }
 
-  return payload as T;
+      if (!error.response) {
+        throw new Error(
+          'Tidak dapat terhubung ke backend. Periksa koneksi dan EXPO_PUBLIC_API_URL.',
+        );
+      }
+
+      const payload = error.response.data;
+      const apiMessage: Partial<ApiMessage> =
+        payload !== null && typeof payload === 'object' ? (payload as Partial<ApiMessage>) : {};
+      const validationMessages = apiMessage.errors?.map((item) => item.message).filter(Boolean);
+      throw new ApiError(
+        validationMessages?.join('\n') || apiMessage.message || 'Permintaan ke backend gagal.',
+        error.response.status,
+      );
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error('Terjadi kesalahan saat menghubungi backend.');
+  }
 }
 
 export function login(email: string, password: string) {
