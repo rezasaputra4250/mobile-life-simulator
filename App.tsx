@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as SecureStore from 'expo-secure-store';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
@@ -17,6 +18,7 @@ import {
   faFire,
   faFlag,
   faHouse,
+  faKey,
   faLock,
   faMedal,
   faPlus,
@@ -27,7 +29,6 @@ import {
   faUser,
 } from '@fortawesome/free-solid-svg-icons';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -37,6 +38,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ApiError,
+  forgotPassword,
+  getCurrentUser,
+  login,
+  register,
+  resetPassword,
+  type AuthSession,
+  type AuthUser,
+} from './src/lib/authApi';
 import './global.css';
 
 type Mission = {
@@ -126,56 +137,102 @@ function MissionCard({
   );
 }
 
-type AuthScreenName = 'login' | 'register' | 'forgot';
+type AuthScreenName = 'login' | 'register' | 'forgot' | 'reset';
 
-function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
+function AuthScreen({
+  onContinueAsGuest,
+  onAuthenticated,
+  initialError,
+}: {
+  onContinueAsGuest: () => void;
+  onAuthenticated: (session: AuthSession, rememberMe: boolean) => Promise<void>;
+  initialError?: string;
+}) {
   const [screen, setScreen] = useState<AuthScreenName>('login');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState(initialError ?? '');
+  const [notice, setNotice] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
 
-  function submitForm() {
-    const normalizedEmail = email.trim();
+  async function submitForm() {
+    const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail.includes('@') || !normalizedEmail.includes('.')) {
-      Alert.alert('Email belum valid', 'Masukkan alamat email yang valid untuk melanjutkan.');
+      setFormError('Masukkan alamat email yang valid.');
       return;
     }
 
-    if (screen === 'forgot') {
-      Alert.alert(
-        'Layanan belum terhubung',
-        'Formulir lupa password sudah siap, tetapi pengiriman email perlu dihubungkan ke server.',
+    if (screen === 'register' && !name.trim()) {
+      setFormError('Masukkan nama petualangmu terlebih dahulu.');
+      return;
+    }
+    if ((screen === 'register' || screen === 'reset') && password.length < 8) {
+      setFormError('Gunakan password minimal 8 karakter.');
+      return;
+    }
+    if ((screen === 'register' || screen === 'reset') && password !== confirmPassword) {
+      setFormError('Pastikan kedua password yang kamu masukkan sama.');
+      return;
+    }
+    if (screen === 'login' && !password) {
+      setFormError('Masukkan password untuk melanjutkan.');
+      return;
+    }
+    if (screen === 'reset' && !resetToken.trim()) {
+      setFormError('Token reset wajib diisi.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFormError('');
+    setNotice('');
+    try {
+      if (screen === 'forgot') {
+        const result = await forgotPassword(normalizedEmail);
+        const tokenMatch = result.resetUrl?.match(/[?&]token=([^&]+)/);
+        if (tokenMatch) {
+          setResetToken(tokenMatch[1]);
+          setScreen('reset');
+          setNotice('Tautan reset diterima dari backend pengembangan. Atur password baru di bawah.');
+        } else {
+          setNotice(
+            `${result.message} Jika tidak menerima email, pastikan layanan email reset password sudah dikonfigurasi di backend.`,
+          );
+        }
+        return;
+      }
+
+      if (screen === 'reset') {
+        const result = await resetPassword(normalizedEmail, resetToken.trim(), password);
+        setScreen('login');
+        setPassword('');
+        setConfirmPassword('');
+        setResetToken('');
+        setNotice(result.message);
+        return;
+      }
+
+      const session =
+        screen === 'register'
+          ? await register(name.trim(), normalizedEmail, password)
+          : await login(normalizedEmail, password);
+      await onAuthenticated(session, screen === 'login' && rememberMe);
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error instanceof ApiError && error.status >= 500
+            ? 'Server sedang bermasalah. Coba lagi beberapa saat.'
+            : error.message
+          : 'Terjadi kesalahan saat menghubungi server. Coba lagi.',
       );
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (screen === 'register') {
-      if (!name.trim()) {
-        Alert.alert('Nama belum diisi', 'Masukkan nama petualangmu terlebih dahulu.');
-        return;
-      }
-      if (password.length < 8) {
-        Alert.alert('Password terlalu pendek', 'Gunakan password minimal 8 karakter.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        Alert.alert('Password tidak cocok', 'Pastikan kedua password yang kamu masukkan sama.');
-        return;
-      }
-    } else if (!password) {
-      Alert.alert('Password belum diisi', 'Masukkan password untuk melanjutkan.');
-      return;
-    }
-
-    Alert.alert(
-      'Layanan belum terhubung',
-      screen === 'register'
-        ? 'Formulir registrasi sudah siap, tetapi pembuatan akun perlu dihubungkan ke server.'
-        : 'Formulir login sudah siap, tetapi autentikasi perlu dihubungkan ke server.',
-    );
   }
 
   function renderInput({
@@ -228,7 +285,7 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
     );
   }
 
-  const isPasswordScreen = screen !== 'forgot';
+  const isPasswordScreen = screen === 'login' || screen === 'register' || screen === 'reset';
 
   return (
     <SafeAreaView className="flex-1 bg-[#101116]" edges={['top', 'left', 'right', 'bottom']}>
@@ -252,7 +309,11 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Kembali ke login"
-              onPress={() => setScreen('login')}
+              onPress={() => {
+                setScreen('login');
+                setFormError('');
+                setNotice('');
+              }}
               className="mb-6 h-10 w-10 items-center justify-center self-start rounded-full border border-[#34343a] bg-[#1b1c22]"
             >
               <FontAwesomeIcon icon={faArrowLeft} size={15} color="#d9d2c5" />
@@ -271,14 +332,18 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
                 ? 'Selamat datang kembali'
                 : screen === 'register'
                   ? 'Mulai petualanganmu'
-                  : 'Pulihkan akun'}
+                  : screen === 'reset'
+                    ? 'Buat password baru'
+                    : 'Pulihkan akun'}
             </Text>
             <Text className="mt-2 max-w-[290px] text-center text-sm leading-5 text-[#99969c]">
               {screen === 'login'
                 ? 'Masuk ke guild dan lanjutkan misi yang menantimu.'
                 : screen === 'register'
                   ? 'Buat akun dan mulai bangun kebiasaan legendaris.'
-                  : 'Masukkan email akunmu untuk mendapatkan bantuan reset password.'}
+                  : screen === 'reset'
+                    ? 'Masukkan token reset dan password baru untuk akunmu.'
+                    : 'Masukkan email akunmu untuk mendapatkan bantuan reset password.'}
             </Text>
           </View>
 
@@ -300,6 +365,14 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
               keyboardType: 'email-address',
             })}
 
+            {screen === 'reset' &&
+              renderInput({
+                icon: faKey,
+                placeholder: 'Token reset',
+                value: resetToken,
+                onChangeText: setResetToken,
+              })}
+
             {isPasswordScreen &&
               renderInput({
                 icon: faLock,
@@ -318,28 +391,57 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
                 isPassword: true,
               })}
 
+            {screen === 'reset' &&
+              renderInput({
+                icon: faLock,
+                placeholder: 'Ulangi password baru',
+                value: confirmPassword,
+                onChangeText: setConfirmPassword,
+                isPassword: true,
+              })}
+
+            {!!formError && (
+              <View className="mb-4 rounded-xl border border-[#793e3e] bg-[#321f21] px-3 py-2.5">
+                <Text className="text-xs leading-5 text-[#f1a39a]">
+                  {formError}
+                </Text>
+              </View>
+            )}
+
+            {!!notice && (
+              <View className="mb-4 rounded-xl border border-[#5a482a] bg-[#2b251a] px-3 py-2.5">
+                <Text className="text-xs leading-5 text-[#e7bd68]">{notice}</Text>
+              </View>
+            )}
+
             {screen === 'login' && (
               <View className="mb-5 flex-row items-center justify-between">
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: rememberMe }}
-                  onPress={() => setRememberMe(!rememberMe)}
-                  className="flex-row items-center py-1"
-                >
-                  <View
-                    className={`mr-2 h-[18px] w-[18px] items-center justify-center rounded border ${
-                      rememberMe
-                        ? 'border-[#e7bd68] bg-[#e7bd68]'
-                        : 'border-[#64616a] bg-transparent'
-                    }`}
+                {Platform.OS !== 'web' && (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: rememberMe }}
+                    onPress={() => setRememberMe(!rememberMe)}
+                    className="flex-row items-center py-1"
                   >
-                    {rememberMe && <FontAwesomeIcon icon={faCheck} size={11} color="#101116" />}
-                  </View>
-                  <Text className="text-xs font-semibold text-[#c5beb0]">Ingat saya</Text>
-                </Pressable>
+                    <View
+                      className={`mr-2 h-[18px] w-[18px] items-center justify-center rounded border ${
+                        rememberMe
+                          ? 'border-[#e7bd68] bg-[#e7bd68]'
+                          : 'border-[#64616a] bg-transparent'
+                      }`}
+                    >
+                      {rememberMe && <FontAwesomeIcon icon={faCheck} size={11} color="#101116" />}
+                    </View>
+                    <Text className="text-xs font-semibold text-[#c5beb0]">Ingat saya</Text>
+                  </Pressable>
+                )}
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setScreen('forgot')}
+                  onPress={() => {
+                    setScreen('forgot');
+                    setFormError('');
+                    setNotice('');
+                  }}
                   hitSlop={8}
                 >
                   <Text className="text-xs font-bold text-[#e7bd68]">Lupa password?</Text>
@@ -349,27 +451,38 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
 
             <Pressable
               accessibilityRole="button"
-              onPress={submitForm}
-              className="h-14 flex-row items-center justify-center rounded-2xl bg-[#d8ad59] active:bg-[#c69a48]"
+              disabled={isSubmitting}
+              onPress={() => void submitForm()}
+              className={`h-14 flex-row items-center justify-center rounded-2xl ${
+                isSubmitting ? 'bg-[#8e7545]' : 'bg-[#d8ad59] active:bg-[#c69a48]'
+              }`}
             >
               <Text className="mr-2 text-sm font-black text-[#211b10]">
-                {screen === 'login'
-                  ? 'Masuk ke akun'
-                  : screen === 'register'
-                    ? 'Buat akun'
-                    : 'Kirim instruksi reset'}
+                {isSubmitting
+                  ? 'Menghubungi server...'
+                  : screen === 'login'
+                    ? 'Masuk ke akun'
+                    : screen === 'register'
+                      ? 'Buat akun'
+                      : screen === 'reset'
+                        ? 'Simpan password baru'
+                        : 'Kirim instruksi reset'}
               </Text>
               <FontAwesomeIcon icon={faArrowRight} size={14} color="#211b10" />
             </Pressable>
 
-            {screen !== 'forgot' && (
+            {(screen === 'login' || screen === 'register') && (
               <View className="mt-5 flex-row items-center justify-center">
                 <Text className="text-xs text-[#99969c]">
                   {screen === 'login' ? 'Belum punya akun?' : 'Sudah punya akun?'}{' '}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setScreen(screen === 'login' ? 'register' : 'login')}
+                  onPress={() => {
+                    setScreen(screen === 'login' ? 'register' : 'login');
+                    setFormError('');
+                    setNotice('');
+                  }}
                   hitSlop={8}
                 >
                   <Text className="text-xs font-extrabold text-[#e7bd68]">
@@ -379,10 +492,14 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
               </View>
             )}
 
-            {screen === 'forgot' && (
+            {(screen === 'forgot' || screen === 'reset') && (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => setScreen('login')}
+                onPress={() => {
+                  setScreen('login');
+                  setFormError('');
+                  setNotice('');
+                }}
                 className="mt-5 items-center"
               >
                 <Text className="text-xs font-bold text-[#c5beb0]">Kembali ke login</Text>
@@ -410,8 +527,11 @@ function AuthScreen({ onContinueAsGuest }: { onContinueAsGuest: () => void }) {
           )}
 
           <Text className="mt-6 text-center text-[10px] leading-4 text-[#706e75]">
-            Ingat saya hanya berlaku selama sesi ini. Penyimpanan akun akan tersedia setelah
-            autentikasi terhubung.
+            {screen === 'login'
+              ? Platform.OS === 'web'
+                ? 'Sesi login hanya berlaku selama aplikasi terbuka di browser.'
+                : 'Token login disimpan dengan aman di perangkat hanya jika Ingat saya dipilih.'
+              : 'Jaga kerahasiaan email, password, dan token reset akunmu.'}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -423,7 +543,82 @@ export default function App() {
   const [missions, setMissions] = useState(initialMissions);
   const [activeTab, setActiveTab] = useState('Beranda');
   const [isGuest, setIsGuest] = useState(false);
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState('');
   const completedMissions = missions.filter((mission) => mission.completed).length;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function restoreSession() {
+      if (Platform.OS === 'web') {
+        setAuthReady(true);
+        return;
+      }
+      try {
+        const token = await SecureStore.getItemAsync('auth_token');
+        if (!token) return;
+
+        try {
+          const result = await getCurrentUser(token);
+          if (isMounted) {
+            setAuthSession({ token, user: result.user, message: result.message });
+            setAuthUser(result.user);
+          }
+        } catch (error) {
+          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+            await SecureStore.deleteItemAsync('auth_token');
+          } else if (isMounted) {
+            setAuthError(
+              error instanceof Error
+                ? `Sesi tersimpan belum dapat dipulihkan. ${error.message}`
+                : 'Sesi tersimpan belum dapat dipulihkan. Periksa koneksi ke backend.',
+            );
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setAuthError('Penyimpanan sesi aman tidak dapat dibuka. Silakan masuk kembali.');
+        }
+      } finally {
+        if (isMounted) setAuthReady(true);
+      }
+    }
+
+    void restoreSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  async function handleAuthenticated(session: AuthSession, rememberMe: boolean) {
+    if (Platform.OS !== 'web' && rememberMe) {
+      await SecureStore.setItemAsync('auth_token', session.token);
+    } else if (Platform.OS !== 'web') {
+      await SecureStore.deleteItemAsync('auth_token');
+    }
+    setAuthSession(session);
+    setAuthUser(session.user);
+    setIsGuest(false);
+    setAuthError('');
+  }
+
+  async function handleLogout() {
+    if (Platform.OS !== 'web') {
+      try {
+        await SecureStore.deleteItemAsync('auth_token');
+      } catch {
+        setAuthError('Token sesi tidak dapat dihapus dari penyimpanan perangkat.');
+        return;
+      }
+    }
+    setAuthSession(null);
+    setAuthUser(null);
+    setIsGuest(false);
+    setActiveTab('Beranda');
+  }
 
   function toggleMission(id: number) {
     setMissions((currentMissions) =>
@@ -433,8 +628,24 @@ export default function App() {
     );
   }
 
-  if (!isGuest) {
-    return <AuthScreen onContinueAsGuest={() => setIsGuest(true)} />;
+  if (!authReady) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#101116]">
+        <StatusBar style="light" />
+        <FontAwesomeIcon icon={faShieldHalved} size={30} color="#e7bd68" />
+        <Text className="mt-4 text-sm font-semibold text-[#c5beb0]">Memeriksa sesi guild...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!authSession && !isGuest) {
+    return (
+      <AuthScreen
+        initialError={authError}
+        onAuthenticated={handleAuthenticated}
+        onContinueAsGuest={() => setIsGuest(true)}
+      />
+    );
   }
 
   return (
@@ -456,7 +667,9 @@ export default function App() {
               <Text className="text-[11px] font-bold uppercase tracking-[2px] text-[#8d8b91]">
                 GUILD PETUALANG
               </Text>
-              <Text className="mt-1 text-lg font-extrabold text-[#f5f0e6]">Selamat pagi!</Text>
+              <Text className="mt-1 text-lg font-extrabold text-[#f5f0e6]">
+                {authUser ? `Halo, ${authUser.name.split(' ')[0]}!` : 'Selamat pagi!'}
+              </Text>
             </View>
           </View>
           <Pressable
@@ -692,9 +905,11 @@ export default function App() {
               <View className="mb-4 h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-[#8a6d38] bg-[#3a3020]">
                 <FontAwesomeIcon icon={faShieldHalved} size={31} color="#e7bd68" />
               </View>
-              <Text className="text-xl font-black text-[#fff8e9]">Penjelajah</Text>
+              <Text className="text-xl font-black text-[#fff8e9]">
+                {authUser?.name ?? 'Penjelajah'}
+              </Text>
               <Text className="mt-1 text-xs font-bold uppercase tracking-[1.7px] text-[#aaa49a]">
-                Penjaga Guild · Level 12
+                {authUser?.email ?? 'Penjaga Guild'} · Level {authUser?.level ?? 12}
               </Text>
               <View className="mt-5 w-full">
                 <View className="mb-2 flex-row items-center justify-between">
@@ -744,6 +959,15 @@ export default function App() {
               </View>
               <FontAwesomeIcon icon={faMedal} size={19} color="#e7bd68" />
             </View>
+            {authSession && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void handleLogout()}
+                className="mt-5 h-12 items-center justify-center rounded-2xl border border-[#793e3e] bg-[#321f21]"
+              >
+                <Text className="text-sm font-bold text-[#f1a39a]">Keluar dari akun</Text>
+              </Pressable>
+            )}
           </>
         )}
       </ScrollView>
