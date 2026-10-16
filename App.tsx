@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
+import { Link } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import {
@@ -27,12 +29,14 @@ import {
   faStar,
   faTrophy,
   faUser,
+  faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
+  Share,
   Text,
   TextInput,
   Pressable,
@@ -43,23 +47,53 @@ import {
   ApiError,
   forgotPassword,
   getCurrentUser,
+  getGuilds,
+  createGuildMission,
+  contributeGuildMission,
+  getFriends,
   getInventory,
+  getAffiliateProfile,
+  getTodos,
+  createTodo,
+  updateTodo,
+  deleteTodo,
+  cancelMission as cancelMissionApi,
   getMissions,
+  createCustomMission,
   login,
   register,
+  respondFriendRequest,
+  removeFriend,
   resetPassword,
+  searchUsers,
+  sendFriendRequest,
+  createGuild,
+  inviteToGuild,
+  respondGuildInvitation,
+  createParty,
+  addPartyMember,
+  removePartyMember,
+  getParties,
   toggleMission as toggleMissionApi,
   type AuthSession,
   type AuthUser,
+  type FriendRequest,
   type InventoryData,
   type Mission,
   type MissionReward,
+  type Friend,
+  type Party,
+  type Guild,
+  type GuildInvitation,
+  type AffiliateProfile,
+  type Todo,
 } from './src/lib/authApi';
 import './global.css';
 
 const initialMissions: Mission[] = [
   {
     id: 1,
+    scheduled_time: '09:00:00',
     title: 'Selesaikan tugas utama',
     detail: 'Fokus kerja · 30 menit',
     reward: {
@@ -74,6 +108,7 @@ const initialMissions: Mission[] = [
   },
   {
     id: 2,
+    scheduled_time: '06:30:00',
     title: 'Latihan pagi',
     detail: 'Kebugaran · 20 menit',
     reward: {
@@ -88,6 +123,7 @@ const initialMissions: Mission[] = [
   },
   {
     id: 3,
+    scheduled_time: '20:00:00',
     title: 'Baca satu bab buku',
     detail: 'Pengetahuan · 15 menit',
     reward: {
@@ -107,14 +143,133 @@ const navigationItems: { label: string; icon: IconProp }[] = [
   { label: 'Misi', icon: faFlag },
   { label: 'Jurnal', icon: faBookOpen },
   { label: 'Inventori', icon: faScroll },
+  { label: 'Guild', icon: faUsers },
   { label: 'Profil', icon: faUser },
 ];
+
+function getLocalDateValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function getLocalTimeValue() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+function parseDateValue(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date();
+  if (year && month && day) date.setFullYear(year, month - 1, day);
+  return date;
+}
+
+function parseTimeValue(value: string) {
+  const [hours, minutes] = value.split(':').map(Number);
+  const date = new Date();
+  date.setHours(Number.isFinite(hours) ? hours : 9, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+  return date;
+}
+
+function formatDateValue(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
+function formatTimeValue(value: Date) {
+  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+}
+
+function PickerField({
+  label,
+  value,
+  mode,
+  onChange,
+}: {
+  label: string;
+  value: Date;
+  mode: 'date' | 'time';
+  onChange: (value: Date) => void;
+}) {
+  const [visible, setVisible] = useState(false);
+  const displayValue = mode === 'date' ? formatDateValue(value) : formatTimeValue(value);
+
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => setVisible(true)}
+        className="h-11 justify-center rounded-xl border border-[#34353d] bg-[#121318] px-3"
+      >
+        <Text className="text-[9px] font-bold uppercase tracking-[1px] text-[#9c927e]">{label}</Text>
+        <Text className="mt-0.5 text-sm text-[#f5f0e6]">{displayValue}</Text>
+      </Pressable>
+      {visible ? (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setVisible(false)}>
+          <View className="flex-1 items-center justify-center bg-black/60 px-6">
+            <View className="w-full rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+              <DateTimePicker
+                value={value}
+                mode={mode}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onValueChange={(_event, selectedValue) => {
+                  if (selectedValue) onChange(selectedValue);
+                }}
+                onDismiss={() => setVisible(false)}
+                textColor="#f5f0e6"
+              />
+              {Platform.OS === 'ios' ? (
+                <Pressable onPress={() => setVisible(false)} className="mt-3 items-center rounded-xl bg-[#e7bd68] py-3">
+                  <Text className="text-xs font-black text-[#211c12]">Selesai</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+    </>
+  );
+}
 
 function formatMissionReward(mission: Mission) {
   if (mission.reward.type === 'xp') return `+${mission.reward.amount} XP`;
   if (mission.reward.type === 'skill') return `Skill: ${mission.reward.name}`;
   if (mission.reward.type === 'item') return `Item: ${mission.reward.name}`;
   return `Badge: ${mission.reward.name}`;
+}
+
+function formatMissionProgress(mission: Mission) {
+  if (!mission.guild_progress) return null;
+  return `${mission.guild_progress.current}/${mission.guild_progress.target} kontribusi`;
+}
+
+function formatMissionSchedule(mission: Mission) {
+  const date = mission.mission_date
+    ? String(mission.mission_date).slice(0, 10).split('-').reverse().join('/')
+    : null;
+  const time = mission.scheduled_time ? String(mission.scheduled_time).slice(0, 5).replace(':', '.') : null;
+
+  if (date && time) return `${date} · ${time}`;
+  if (date) return date;
+  if (time) return `Pukul ${time}`;
+  return 'Waktu fleksibel';
+}
+
+function formatMissionFrequency(value?: Mission['frequency']) {
+  if (value === 'weekly') return 'Mingguan';
+  if (value === 'monthly') return 'Bulanan';
+  return 'Harian';
+}
+
+function formatMissionCategory(value?: Mission['category']) {
+  if (value === 'personal') return 'Pribadi';
+  if (value === 'guild') return 'Guild';
+  return 'Bawaan system';
+}
+
+function formatTodoDueDate(value?: string | null) {
+  if (!value) return 'Waktu fleksibel';
+  const normalized = String(value).replace('T', ' ');
+  return normalized.length >= 16 ? normalized.slice(0, 16).replace(' ', ' · ') : normalized;
 }
 
 function MissionCard({
@@ -130,26 +285,45 @@ function MissionCard({
       accessibilityLabel={`Lihat detail misi ${mission.title}`}
       onPress={() => onPress(mission)}
       className={`flex-row items-center rounded-2xl border p-4 ${
-        mission.completed ? 'border-[#34352f] bg-[#1a1d1b]' : 'border-[#2d2e35] bg-[#1b1c22]'
+        mission.failed
+          ? 'border-[#633d3d] bg-[#241b1b]'
+          : mission.completed
+            ? 'border-[#34352f] bg-[#1a1d1b]'
+            : 'border-[#2d2e35] bg-[#1b1c22]'
       }`}
     >
       <View
         className={`mr-3 h-6 w-6 items-center justify-center rounded-full border ${
-          mission.completed
-            ? 'border-[#8cbf9a] bg-[#8cbf9a]'
-            : 'border-[#5e5b53] bg-transparent'
+          mission.failed
+            ? 'border-[#e87959] bg-[#e87959]'
+            : mission.completed
+              ? 'border-[#8cbf9a] bg-[#8cbf9a]'
+              : 'border-[#5e5b53] bg-transparent'
         }`}
       >
-        {mission.completed && <FontAwesomeIcon icon={faCheck} size={12} color="#101116" />}
+        {mission.failed ? (
+          <Text className="text-xs font-black text-[#241b1b]">!</Text>
+        ) : mission.completed ? (
+          <FontAwesomeIcon icon={faCheck} size={12} color="#101116" />
+        ) : null}
       </View>
       <View className="flex-1">
         <Text
           className={`text-sm font-bold ${
-            mission.completed ? 'text-[#898e88] line-through' : 'text-[#f1ede4]'
+            mission.failed
+              ? 'text-[#d58b78] line-through'
+              : mission.completed
+                ? 'text-[#898e88] line-through'
+                : 'text-[#f1ede4]'
           }`}
         >
           {mission.title}
         </Text>
+        <Text className="mt-1 text-xs font-bold text-[#e7bd68]">
+          {formatMissionCategory(mission.category)} · {formatMissionFrequency(mission.frequency)} · {formatMissionSchedule(mission)}
+        </Text>
+        {mission.failed && <Text className="mt-1 text-xs font-bold text-[#e87959]">Gagal</Text>}
+        {formatMissionProgress(mission) ? <Text className="mt-1 text-xs font-bold text-[#8cbf9a]">{formatMissionProgress(mission)}</Text> : null}
         <Text className="mt-1 text-xs text-[#85838a]">{mission.detail}</Text>
       </View>
       <View className="ml-2 items-end">
@@ -172,11 +346,13 @@ function MissionRewardModal({
   visible,
   onClose,
   onComplete,
+  onCancel,
 }: {
   mission: Mission | null;
   visible: boolean;
   onClose: () => void;
   onComplete: (missionId: number) => void;
+  onCancel: (missionId: number) => void;
 }) {
   if (!mission) return null;
 
@@ -190,6 +366,9 @@ function MissionRewardModal({
                 Detail misi
               </Text>
               <Text className="mt-2 text-xl font-black text-[#fff8e9]">{mission.title}</Text>
+          <Text className="mt-2 text-sm font-bold text-[#e7bd68]">
+            {formatMissionFrequency(mission.frequency)} · {formatMissionSchedule(mission)}
+          </Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -217,9 +396,24 @@ function MissionRewardModal({
             </Text>
           </View>
 
-          {mission.completed ? (
-            <View className="rounded-2xl border border-[#416247] bg-[#243027] p-4">
-              <Text className="text-center text-sm font-bold text-[#8cbf9a]">Misi sudah selesai</Text>
+          {mission.failed ? (
+            <View className="rounded-2xl border border-[#633d3d] bg-[#321f1f] p-4">
+              <Text className="text-center text-sm font-bold text-[#e87959]">
+                Misi gagal karena waktunya sudah terlewat
+              </Text>
+            </View>
+          ) : mission.completed ? (
+            <View>
+              <View className="rounded-2xl border border-[#416247] bg-[#243027] p-4">
+                <Text className="text-center text-sm font-bold text-[#8cbf9a]">Misi sudah selesai</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => onCancel(mission.id)}
+                className="mt-3 h-12 items-center justify-center rounded-2xl border border-[#633d3d] bg-[#321f1f]"
+              >
+                <Text className="text-sm font-black text-[#e87959]">Batalkan penyelesaian</Text>
+              </Pressable>
             </View>
           ) : (
             <Pressable
@@ -477,6 +671,7 @@ function AuthScreen({
   const [notice, setNotice] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetToken, setResetToken] = useState('');
@@ -540,7 +735,7 @@ function AuthScreen({
 
       const session =
         screen === 'register'
-          ? await register(name.trim(), normalizedEmail, password)
+          ? await register(name.trim(), normalizedEmail, password, referralCode.trim() || undefined)
           : await login(normalizedEmail, password);
       await onAuthenticated(session);
     } catch (error) {
@@ -676,6 +871,15 @@ function AuthScreen({
                 value: name,
                 onChangeText: setName,
                 autoCapitalize: 'words',
+              })}
+
+            {screen === 'register' &&
+              renderInput({
+                icon: faKey,
+                placeholder: 'Kode affiliate (opsional)',
+                value: referralCode,
+                onChangeText: setReferralCode,
+                autoCapitalize: 'characters',
               })}
 
             {renderInput({
@@ -842,6 +1046,7 @@ function AuthScreen({
 
 export default function App() {
   const [missions, setMissions] = useState(initialMissions);
+  const [streakDays, setStreakDays] = useState(0);
   const [activeTab, setActiveTab] = useState('Beranda');
   const [isGuest, setIsGuest] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
@@ -852,7 +1057,17 @@ export default function App() {
   const [isMissionLoading, setIsMissionLoading] = useState(false);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [unlockedSkill, setUnlockedSkill] = useState<MissionReward | null>(null);
-  const [missionFilter, setMissionFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [missionFrequency, setMissionFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [missionCategory, setMissionCategory] = useState<'all' | 'system' | 'personal' | 'guild'>('all');
+  const [missionFilter, setMissionFilter] = useState<'all' | 'active' | 'failed' | 'completed'>('all');
+  const [isMissionComposerOpen, setIsMissionComposerOpen] = useState(false);
+  const [missionComposerType, setMissionComposerType] = useState<'personal' | 'guild' | null>(null);
+  const [personalMissionTitle, setPersonalMissionTitle] = useState('');
+  const [personalMissionDetail, setPersonalMissionDetail] = useState('');
+  const [personalMissionDate, setPersonalMissionDate] = useState(getLocalDateValue());
+  const [personalMissionTime, setPersonalMissionTime] = useState(getLocalTimeValue());
+  const [personalMissionReward, setPersonalMissionReward] = useState('25');
+  const [personalMissionError, setPersonalMissionError] = useState('');
   const [inventory, setInventory] = useState<InventoryData>({
     items: [],
     badges: [],
@@ -860,6 +1075,33 @@ export default function App() {
   });
   const [isInventoryLoading, setIsInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState('');
+  const [affiliateProfile, setAffiliateProfile] = useState<AffiliateProfile | null>(null);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todoTitle, setTodoTitle] = useState('');
+  const [todoDescription, setTodoDescription] = useState('');
+  const [todoDueDate, setTodoDueDate] = useState('');
+  const [todoError, setTodoError] = useState('');
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [parties, setParties] = useState<Party[]>([]);
+  const [guilds, setGuilds] = useState<Guild[]>([]);
+  const [guildInvitations, setGuildInvitations] = useState<GuildInvitation[]>([]);
+  const [socialSearch, setSocialSearch] = useState('');
+  const [socialSearchResults, setSocialSearchResults] = useState<
+    Array<{ id: number; name: string; email: string }>
+  >([]);
+  const [socialError, setSocialError] = useState('');
+  const [isSocialLoading, setIsSocialLoading] = useState(false);
+  const [newPartyName, setNewPartyName] = useState('');
+  const [isPartyFormOpen, setIsPartyFormOpen] = useState(false);
+  const [newGuildName, setNewGuildName] = useState('');
+  const [newGuildDescription, setNewGuildDescription] = useState('');
+  const [isGuildFormOpen, setIsGuildFormOpen] = useState(false);
+  const [guildMissionTitle, setGuildMissionTitle] = useState('');
+  const [guildMissionDetail, setGuildMissionDetail] = useState('');
+  const [guildMissionDate, setGuildMissionDate] = useState(getLocalDateValue());
+  const [guildMissionTime, setGuildMissionTime] = useState(getLocalTimeValue());
+  const [guildMissionReward, setGuildMissionReward] = useState('25');
   const completedMissions = missions.filter((mission) => mission.completed).length;
   const totalMissionXp = missions.reduce(
     (total, mission) =>
@@ -871,11 +1113,26 @@ export default function App() {
   const nextLevelExperience =
     authUser?.stats?.experience_to_next_level ?? authUser?.experience_to_next_level ?? 100;
   const userProfile = authUser?.profile;
-  const visibleMissions = missions.filter((mission) => {
-    if (missionFilter === 'active') return !mission.completed;
+  const categoryMissions = missions.filter((mission) => missionCategory === 'all' || (mission.category || 'system') === missionCategory);
+  const frequencyMissions = categoryMissions.filter((mission) => (mission.frequency || 'daily') === missionFrequency);
+  const visibleMissions = frequencyMissions.filter((mission) => {
+    if (missionFilter === 'active') return !mission.completed && !mission.failed;
+    if (missionFilter === 'failed') return Boolean(mission.failed);
     if (missionFilter === 'completed') return mission.completed;
     return true;
   });
+  const selectedCompletedMissions = frequencyMissions.filter((mission) => mission.completed).length;
+  const selectedFailedMissions = frequencyMissions.filter((mission) => mission.failed).length;
+  const selectedMissionXp = frequencyMissions.reduce(
+    (total, mission) => total + (mission.completed && mission.reward.type === 'xp' ? mission.reward.amount : 0),
+    0,
+  );
+
+  function formatMissionFrequencyLabel(value: 'daily' | 'weekly' | 'monthly') {
+    if (value === 'weekly') return 'Mingguan';
+    if (value === 'monthly') return 'Bulanan';
+    return 'Harian';
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -934,6 +1191,7 @@ export default function App() {
         const result = await getMissions(authSession.token);
         if (isMounted) {
           setMissions(result.missions);
+          setStreakDays(result.stats?.streak_days ?? 0);
           setMissionError('');
         }
       } catch (error) {
@@ -946,6 +1204,69 @@ export default function App() {
     }
 
     void loadMissions();
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession) return;
+    let isMounted = true;
+
+    async function loadConnectedData() {
+      try {
+        const [affiliateResult, todoResult] = await Promise.all([
+          getAffiliateProfile(authSession.token),
+          getTodos(authSession.token),
+        ]);
+        if (isMounted) {
+          setAffiliateProfile(affiliateResult.affiliate);
+          setTodos(todoResult.todos);
+          setTodoError('');
+        }
+      } catch (error) {
+        if (isMounted) {
+          setTodoError(error instanceof Error ? error.message : 'Data to-do belum dapat dimuat.');
+        }
+      }
+    }
+
+    void loadConnectedData();
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession) return;
+    let isMounted = true;
+
+    async function loadSocial() {
+      setIsSocialLoading(true);
+      try {
+        const [friendsResult, partiesResult, guildsResult] = await Promise.all([
+          getFriends(authSession.token),
+          getParties(authSession.token),
+          getGuilds(authSession.token),
+        ]);
+        if (isMounted) {
+          setFriends(friendsResult.friends);
+          setFriendRequests(friendsResult.requests);
+          setParties(partiesResult.parties);
+          setGuilds(guildsResult.guilds);
+          setGuildInvitations(guildsResult.invitations);
+          setSocialError('');
+        }
+      } catch (error) {
+        if (isMounted) {
+          setSocialError(error instanceof Error ? error.message : 'Data sosial belum dapat dimuat.');
+        }
+      } finally {
+        if (isMounted) setIsSocialLoading(false);
+      }
+    }
+
+    void loadSocial();
     return () => {
       isMounted = false;
     };
@@ -1006,8 +1327,287 @@ export default function App() {
     setAuthSession(null);
     setAuthUser(null);
     setInventory({ items: [], badges: [], totals: { items: 0, badges: 0 } });
+    setAffiliateProfile(null);
+    setTodos([]);
+    setTodoTitle('');
+    setTodoDescription('');
+    setTodoDueDate('');
+    setStreakDays(0);
+    setFriends([]);
+    setFriendRequests([]);
+    setParties([]);
+    setGuilds([]);
+    setGuildInvitations([]);
     setIsGuest(false);
     setActiveTab('Beranda');
+  }
+
+  async function handleCreateTodo() {
+    if (!authSession || !todoTitle.trim()) {
+      setTodoError('Judul to-do wajib diisi.');
+      return;
+    }
+    try {
+      const result = await createTodo(
+        authSession.token,
+        todoTitle.trim(),
+        todoDueDate.trim() || undefined,
+        todoDescription.trim() || undefined,
+      );
+      setTodos((current) => [...current, result.todo]);
+      const missionsResult = await getMissions(authSession.token);
+      setMissions(missionsResult.missions);
+      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setTodoTitle('');
+      setTodoDescription('');
+      setTodoDueDate('');
+      setTodoError('');
+    } catch (error) {
+      setTodoError(error instanceof Error ? error.message : 'To-do belum dapat dibuat.');
+    }
+  }
+
+  async function handleCreatePersonalMission() {
+    const rewardXp = Number(personalMissionReward);
+    if (!authSession || personalMissionTitle.trim().length < 2) {
+      setPersonalMissionError('Judul misi pribadi minimal 2 karakter.');
+      return;
+    }
+    if (!Number.isInteger(rewardXp) || rewardXp < 1 || rewardXp > 500) {
+      setPersonalMissionError('Reward XP harus berupa angka 1 sampai 500.');
+      return;
+    }
+    try {
+      await createCustomMission(authSession.token, {
+        title: personalMissionTitle.trim(),
+        detail: personalMissionDetail.trim() || undefined,
+        mission_date: personalMissionDate,
+        scheduled_time: personalMissionTime,
+        reward_xp: rewardXp,
+        difficulty: rewardXp > 100 ? 'epic' : rewardXp > 50 ? 'hard' : rewardXp > 25 ? 'medium' : 'easy',
+      });
+      const missionsResult = await getMissions(authSession.token);
+      setMissions(missionsResult.missions);
+      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setPersonalMissionTitle('');
+      setPersonalMissionDetail('');
+      setPersonalMissionDate(getLocalDateValue());
+      setPersonalMissionTime(getLocalTimeValue());
+      setPersonalMissionReward('25');
+      setPersonalMissionError('');
+      setMissionComposerType(null);
+      setIsMissionComposerOpen(false);
+    } catch (error) {
+      setPersonalMissionError(error instanceof Error ? error.message : 'Misi pribadi belum dapat dibuat.');
+    }
+  }
+
+  async function handleToggleTodo(todo: Todo) {
+    if (!authSession) return;
+    const status = todo.status === 'completed' ? 'pending' : 'completed';
+    try {
+      const result = await updateTodo(authSession.token, todo.id, { status });
+      setTodos((current) => current.map((item) => (item.id === todo.id ? result.todo : item)));
+      const missionsResult = await getMissions(authSession.token);
+      setMissions(missionsResult.missions);
+      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setTodoError('');
+    } catch (error) {
+      setTodoError(error instanceof Error ? error.message : 'Status to-do gagal diperbarui.');
+    }
+  }
+
+  async function handleDeleteTodo(todoId: number) {
+    if (!authSession) return;
+    try {
+      await deleteTodo(authSession.token, todoId);
+      setTodos((current) => current.filter((todo) => todo.id !== todoId));
+      const missionsResult = await getMissions(authSession.token);
+      setMissions(missionsResult.missions);
+      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setTodoError('');
+    } catch (error) {
+      setTodoError(error instanceof Error ? error.message : 'To-do gagal dihapus.');
+    }
+  }
+
+  async function handleRemoveFriend(userId: number) {
+    if (!authSession) return;
+    try {
+      await removeFriend(authSession.token, userId);
+      await refreshSocial();
+      setSocialError('');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Teman gagal dihapus.');
+    }
+  }
+
+  async function handleAddPartyMember(partyId: number, userId: number) {
+    if (!authSession) return;
+    try {
+      await addPartyMember(authSession.token, partyId, userId);
+      await refreshSocial();
+      setSocialError('Teman berhasil ditambahkan ke party.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Teman gagal ditambahkan ke party.');
+    }
+  }
+
+  async function handleRemovePartyMember(partyId: number, userId: number) {
+    if (!authSession) return;
+    try {
+      await removePartyMember(authSession.token, partyId, userId);
+      await refreshSocial();
+      setSocialError('Anggota berhasil dikeluarkan dari party.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Anggota party gagal dikeluarkan.');
+    }
+  }
+
+  async function refreshSocial() {
+    if (!authSession) return;
+    const [friendsResult, partiesResult, guildsResult] = await Promise.all([
+      getFriends(authSession.token),
+      getParties(authSession.token),
+      getGuilds(authSession.token),
+    ]);
+    setFriends(friendsResult.friends);
+    setFriendRequests(friendsResult.requests);
+    setParties(partiesResult.parties);
+    setGuilds(guildsResult.guilds);
+    setGuildInvitations(guildsResult.invitations);
+  }
+
+  async function handleSocialSearch() {
+    if (!authSession || socialSearch.trim().length < 2) {
+      setSocialError('Masukkan minimal 2 karakter untuk mencari pengguna.');
+      setSocialSearchResults([]);
+      return;
+    }
+    try {
+      const result = await searchUsers(authSession.token, socialSearch.trim());
+      setSocialSearchResults(result.users);
+      setSocialError('');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Pencarian pengguna gagal.');
+    }
+  }
+
+  async function handleSendFriendRequest(userId: number) {
+    if (!authSession) return;
+    try {
+      await sendFriendRequest(authSession.token, userId);
+      setSocialError('Permintaan pertemanan berhasil dikirim.');
+      setSocialSearchResults((results) => results.filter((user) => user.id !== userId));
+      await refreshSocial();
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Permintaan pertemanan gagal.');
+    }
+  }
+
+  async function handleFriendRequest(requestId: number, action: 'accept' | 'reject') {
+    if (!authSession) return;
+    try {
+      await respondFriendRequest(authSession.token, requestId, action);
+      await refreshSocial();
+      setSocialError('');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Permintaan pertemanan gagal diproses.');
+    }
+  }
+
+  async function handleCreateParty() {
+    if (!authSession || !newPartyName.trim()) {
+      setSocialError('Nama party wajib diisi.');
+      return;
+    }
+    try {
+      await createParty(authSession.token, newPartyName.trim());
+      setNewPartyName('');
+      setIsPartyFormOpen(false);
+      await refreshSocial();
+      setSocialError('Party berhasil dibuat.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Party belum dapat dibuat.');
+    }
+  }
+
+  async function handleCreateGuild() {
+    if (!authSession || newGuildName.trim().length < 2) {
+      setSocialError('Nama guild minimal 2 karakter.');
+      return;
+    }
+    try {
+      await createGuild(authSession.token, newGuildName.trim(), newGuildDescription.trim());
+      setNewGuildName('');
+      setNewGuildDescription('');
+      setIsGuildFormOpen(false);
+      await refreshSocial();
+      setSocialError('Guild berhasil dibuat.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Guild belum dapat dibuat.');
+    }
+  }
+
+  async function handleCreateGuildMission(guildId: number) {
+    if (!authSession || guildMissionTitle.trim().length < 2) {
+      setSocialError('Judul misi guild minimal 2 karakter.');
+      return;
+    }
+    try {
+      await createGuildMission(authSession.token, guildId, {
+        title: guildMissionTitle.trim(),
+        detail: guildMissionDetail.trim() || undefined,
+        mission_date: guildMissionDate,
+        scheduled_time: guildMissionTime,
+        reward_xp: Number(guildMissionReward) || undefined,
+        difficulty: 'medium',
+        target_progress: 5,
+      });
+      setGuildMissionTitle('');
+      setGuildMissionDetail('');
+      setGuildMissionDate(getLocalDateValue());
+      setGuildMissionTime(getLocalTimeValue());
+      setGuildMissionReward('25');
+      setMissionComposerType(null);
+      setIsMissionComposerOpen(false);
+      await refreshSocial();
+      setSocialError('Misi guild berhasil dibuat.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Misi guild belum dapat dibuat.');
+    }
+  }
+
+  async function handleContributeGuildMission(guildId: number, missionId: number) {
+    if (!authSession) return;
+    try {
+      const result = await contributeGuildMission(authSession.token, guildId, missionId);
+      await refreshSocial();
+      setSocialError(result.data.completed ? 'Misi guild selesai.' : `Progress bertambah ${result.data.applied}.`);
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Progress misi guild gagal ditambahkan.');
+    }
+  }
+
+  async function handleGuildInvitation(invitationId: number, action: 'accept' | 'reject') {
+    if (!authSession) return;
+    try {
+      await respondGuildInvitation(authSession.token, invitationId, action);
+      await refreshSocial();
+      setSocialError('');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Undangan guild gagal diproses.');
+    }
+  }
+
+  async function handleInviteToGuild(guildId: number, userId: number) {
+    if (!authSession) return;
+    try {
+      await inviteToGuild(authSession.token, guildId, userId);
+      setSocialError('Undangan guild berhasil dikirim.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Undangan guild gagal dikirim.');
+    }
   }
 
   async function toggleMission(id: number): Promise<{ completed: boolean; reward: MissionReward | null }> {
@@ -1041,6 +1641,15 @@ export default function App() {
   }
 
   function openMissionDetails(mission: Mission) {
+    if (mission.todo_id) {
+      const todo = todos.find((item) => item.id === mission.todo_id);
+      if (todo) void handleToggleTodo(todo);
+      return;
+    }
+    if (mission.guild_mission_id && mission.guild_id) {
+      void handleContributeGuildMission(mission.guild_id, mission.guild_mission_id);
+      return;
+    }
     setSelectedMission(mission);
   }
 
@@ -1051,18 +1660,55 @@ export default function App() {
       if (result.reward?.type === 'skill') setUnlockedSkill(result.reward);
       if (authSession) {
         try {
-          const [profileResult, inventoryResult] = await Promise.all([
+          const [profileResult, inventoryResult, missionsResult] = await Promise.all([
             getCurrentUser(authSession.token),
             getInventory(authSession.token),
+            getMissions(authSession.token),
           ]);
           setAuthUser(profileResult.user);
           setInventory(inventoryResult);
+          setMissions(missionsResult.missions);
+          setStreakDays(missionsResult.stats?.streak_days ?? 0);
         } catch (error) {
           setMissionError(
             error instanceof Error ? error.message : 'Data karakter belum dapat diperbarui.',
           );
         }
       }
+    }
+  }
+
+  async function cancelSelectedMission(id: number) {
+    if (!authSession) {
+      setMissions((currentMissions) =>
+        currentMissions.map((mission) =>
+          mission.id === id ? { ...mission, completed: false } : mission,
+        ),
+      );
+      setSelectedMission(null);
+      return;
+    }
+
+    try {
+      await cancelMissionApi(authSession.token, id);
+      setMissions((currentMissions) =>
+        currentMissions.map((mission) =>
+          mission.id === id ? { ...mission, completed: false, completed_at: null } : mission,
+        ),
+      );
+      setSelectedMission(null);
+      const [profileResult, inventoryResult, missionsResult] = await Promise.all([
+        getCurrentUser(authSession.token),
+        getInventory(authSession.token),
+        getMissions(authSession.token),
+      ]);
+      setAuthUser(profileResult.user);
+      setInventory(inventoryResult);
+      setMissions(missionsResult.missions);
+      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setMissionError('');
+    } catch (error) {
+      setMissionError(error instanceof Error ? error.message : 'Pembatalan misi gagal.');
     }
   }
 
@@ -1155,6 +1801,36 @@ export default function App() {
           </View>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setActiveTab('Guild')}
+          className="mb-5 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4"
+        >
+          <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
+            <FontAwesomeIcon icon={faUsers} size={18} color="#e7bd68" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-extrabold text-[#f5f0e6]">Guild</Text>
+            <Text className="mt-1 text-xs text-[#aaa49a]">
+              Buat guild dan ajak temanmu berpetualang.
+            </Text>
+          </View>
+          <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
+        </Pressable>
+
+        <Link href="/classes" asChild>
+          <Pressable className="mb-5 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+            <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
+              <FontAwesomeIcon icon={faShieldHalved} size={18} color="#e7bd68" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-extrabold text-[#f5f0e6]">Class karakter</Text>
+              <Text className="mt-1 text-xs text-[#aaa49a]">Pilih jalur perkembangan petualangmu.</Text>
+            </View>
+            <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
+          </Pressable>
+        </Link>
+
         <View className="mb-7 flex-row gap-3">
           <View className="flex-1 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
             <View className="mb-3 h-9 w-9 items-center justify-center rounded-xl bg-[#33291d]">
@@ -1172,7 +1848,7 @@ export default function App() {
             <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-[#85838a]">
               Streak
             </Text>
-            <Text className="mt-1 text-xl font-extrabold text-[#f5f0e6]">5 hari</Text>
+            <Text className="mt-1 text-xl font-extrabold text-[#f5f0e6]">{streakDays} hari</Text>
           </View>
           <View className="flex-1 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
             <View className="mb-3 h-9 w-9 items-center justify-center rounded-xl bg-[#33291d]">
@@ -1192,7 +1868,13 @@ export default function App() {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Tambah misi"
+            accessibilityLabel="Tambah misi pribadi"
+            onPress={() => {
+              setMissionCategory('personal');
+              setActiveTab('Misi');
+              setMissionComposerType(null);
+              setIsMissionComposerOpen(true);
+            }}
             className="h-10 w-10 items-center justify-center rounded-xl border border-[#5a482a] bg-[#2b251a]"
           >
             <FontAwesomeIcon icon={faPlus} size={16} color="#e7bd68" />
@@ -1213,11 +1895,77 @@ export default function App() {
           </>
         ) : activeTab === 'Misi' ? (
           <>
-            <View className="mb-6">
-              <Text className="text-2xl font-black text-[#f5f0e6]">Papan Misi</Text>
-              <Text className="mt-2 text-sm leading-5 text-[#929097]">
-                Selesaikan tantanganmu dan kumpulkan XP untuk naik level.
-              </Text>
+            <View className="mb-6 flex-row items-start">
+              <View className="flex-1">
+                <Text className="text-2xl font-black text-[#f5f0e6]">Papan Misi</Text>
+                <Text className="mt-2 text-sm leading-5 text-[#929097]">
+                  Selesaikan tantanganmu dan kumpulkan XP untuk naik level.
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tambah misi"
+                onPress={() => {
+                  setMissionComposerType(null);
+                  setIsMissionComposerOpen(true);
+                }}
+                className="ml-3 h-11 w-11 items-center justify-center rounded-xl border border-[#5a482a] bg-[#2b251a]"
+              >
+                <FontAwesomeIcon icon={faPlus} size={17} color="#e7bd68" />
+              </Pressable>
+            </View>
+
+            <View className="mb-4 flex-row rounded-2xl border border-[#34353d] bg-[#1b1c22] p-1">
+              {(['daily', 'weekly', 'monthly'] as const).map((frequency) => (
+                <Pressable
+                  key={frequency}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setMissionFrequency(frequency);
+                    setMissionFilter('all');
+                  }}
+                  className={`flex-1 rounded-xl px-2 py-3 ${
+                    missionFrequency === frequency ? 'bg-[#342b1b]' : 'bg-transparent'
+                  }`}
+                >
+                  <Text
+                    className={`text-center text-xs font-extrabold ${
+                      missionFrequency === frequency ? 'text-[#e7bd68]' : 'text-[#85838a]'
+                    }`}
+                  >
+                    {formatMissionFrequencyLabel(frequency)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View className="mb-5 flex-row gap-2">
+              {(['all', 'system', 'personal', 'guild'] as const).map((category) => (
+                <Pressable
+                  key={category}
+                  accessibilityRole="button"
+                  onPress={() => setMissionCategory(category)}
+                  className={`rounded-full border px-3 py-2 ${
+                    missionCategory === category
+                      ? 'border-[#e7bd68] bg-[#342b1b]'
+                      : 'border-[#34353d] bg-[#1b1c22]'
+                  }`}
+                >
+                  <Text
+                    className={`text-[10px] font-bold ${
+                      missionCategory === category ? 'text-[#e7bd68]' : 'text-[#85838a]'
+                    }`}
+                  >
+                    {category === 'all'
+                      ? 'Semua'
+                      : category === 'system'
+                        ? 'Bawaan system'
+                        : category === 'personal'
+                          ? 'Pribadi'
+                          : 'Guild'}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
             <View className="mb-6 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
@@ -1226,17 +1974,15 @@ export default function App() {
                   <FontAwesomeIcon icon={faFlag} size={17} color="#e7bd68" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-extrabold text-[#f5f0e6]">Misi harian</Text>
+                  <Text className="text-sm font-extrabold text-[#f5f0e6]">
+                    Misi {formatMissionFrequencyLabel(missionFrequency).toLowerCase()}
+                  </Text>
                   <Text className="mt-1 text-xs text-[#aaa49a]">
-                    {completedMissions} dari {missions.length} misi selesai
+                    {selectedCompletedMissions} selesai · {selectedFailedMissions} gagal dari {frequencyMissions.length} misi
                   </Text>
                 </View>
                 <Text className="text-sm font-extrabold text-[#e7bd68]">
-                  {missions.reduce(
-                    (total, mission) =>
-                      total + (mission.completed && mission.reward.type === 'xp' ? mission.reward.amount : 0),
-                    0,
-                  )}{' '}
+                  {selectedMissionXp}{' '}
                   XP
                 </Text>
               </View>
@@ -1244,7 +1990,7 @@ export default function App() {
                 <View
                   className="h-full rounded-full bg-[#e7bd68]"
                   style={{
-                    width: `${missions.length ? (completedMissions / missions.length) * 100 : 0}%`,
+                    width: `${frequencyMissions.length ? (selectedCompletedMissions / frequencyMissions.length) * 100 : 0}%`,
                   }}
                 />
               </View>
@@ -1255,7 +2001,7 @@ export default function App() {
               <Text className="text-xs font-semibold text-[#85838a]">{visibleMissions.length} misi</Text>
             </View>
             <View className="mb-4 flex-row gap-2">
-              {(['all', 'active', 'completed'] as const).map((filter) => (
+              {(['all', 'active', 'failed', 'completed'] as const).map((filter) => (
                 <Pressable
                   key={filter}
                   accessibilityRole="button"
@@ -1271,7 +2017,13 @@ export default function App() {
                       missionFilter === filter ? 'text-[#e7bd68]' : 'text-[#85838a]'
                     }`}
                   >
-                    {filter === 'all' ? 'Semua' : filter === 'active' ? 'Aktif' : 'Selesai'}
+                    {filter === 'all'
+                      ? 'Semua'
+                      : filter === 'active'
+                        ? 'Aktif'
+                        : filter === 'failed'
+                          ? 'Gagal'
+                          : 'Selesai'}
                   </Text>
                 </Pressable>
               ))}
@@ -1319,6 +2071,51 @@ export default function App() {
                 Catatan perjalanan dan pencapaianmu.
               </Text>
             </View>
+
+            {authSession ? (
+              <View className="mb-6 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                <View className="mb-3 flex-row items-center">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#3a3020]">
+                    <FontAwesomeIcon icon={faFlag} size={16} color="#e7bd68" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-extrabold text-[#f5f0e6]">To-do pribadi</Text>
+                    <Text className="mt-1 text-xs text-[#aaa49a]">Catatan tugas pribadi yang belum menjadi misi ber-reward.</Text>
+                  </View>
+                  <View className="rounded-full border border-[#66522c] bg-[#342b1b] px-2 py-1">
+                    <Text className="text-[9px] font-black text-[#e7bd68]">PRIBADI</Text>
+                  </View>
+                </View>
+                <View className="mt-4 gap-2">
+                  {todos.map((todo) => (
+                    <View key={todo.id} className={`rounded-2xl border p-4 ${todo.status === 'completed' ? 'border-[#34352f] bg-[#1a1d1b]' : 'border-[#2d2e35] bg-[#1b1c22]'}`}>
+                      <View className="flex-row items-center">
+                      <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: todo.status === 'completed' }}
+                        onPress={() => void handleToggleTodo(todo)}
+                        className={`mr-3 h-6 w-6 items-center justify-center rounded-full border ${
+                          todo.status === 'completed' ? 'border-[#8cbf9a] bg-[#8cbf9a]' : 'border-[#77757d]'
+                        }`}
+                      >
+                        {todo.status === 'completed' ? <FontAwesomeIcon icon={faCheck} size={12} color="#101116" /> : null}
+                      </Pressable>
+                      <View className="flex-1">
+                        <Text className={`text-sm font-bold ${todo.status === 'completed' ? 'text-[#898e88] line-through' : 'text-[#f1ede4]'}`}>
+                          {todo.title}
+                        </Text>
+                        <Text className="mt-1 text-xs font-bold text-[#e7bd68]">Pribadi · {formatTodoDueDate(todo.due_date)}</Text>
+                      </View>
+                      <Pressable accessibilityRole="button" onPress={() => void handleDeleteTodo(todo.id)} className="px-2 py-1">
+                        <Text className="text-[10px] font-bold text-[#f1a39a]">Hapus</Text>
+                      </Pressable>
+                      </View>
+                      {todo.description ? <Text className="mt-2 ml-9 text-xs leading-5 text-[#85838a]">{todo.description}</Text> : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             <View className="mb-6 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
               <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
@@ -1378,8 +2175,360 @@ export default function App() {
             <View className="mt-6 flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
               <FontAwesomeIcon icon={faFire} size={17} color="#e87959" />
               <Text className="ml-3 flex-1 text-sm text-[#c5beb0]">Konsistensi petualangan</Text>
-              <Text className="text-sm font-extrabold text-[#f5f0e6]">5 hari berturut-turut</Text>
+              <Text className="text-sm font-extrabold text-[#f5f0e6]">
+                {streakDays ? `${streakDays} hari berturut-turut` : 'Belum ada konsistensi'}
+              </Text>
             </View>
+          </>
+        ) : activeTab === 'Guild' ? (
+          <>
+            <View className="mb-6">
+              <Text className="text-2xl font-black text-[#f5f0e6]">Guild</Text>
+              <Text className="mt-2 text-sm leading-5 text-[#929097]">
+                Temukan teman, terima ajakan, dan bentuk party untuk berpetualang bersama.
+              </Text>
+            </View>
+
+            {socialError ? (
+              <Text className="mb-4 rounded-xl bg-[#321f21] p-3 text-xs leading-5 text-[#f1a39a]">
+                {socialError}
+              </Text>
+            ) : null}
+
+            <View className="mb-6 flex-row items-center justify-between">
+              <View>
+                <Text className="text-base font-extrabold text-[#f5f0e6]">Guild saya</Text>
+                <Text className="mt-1 text-xs text-[#85838a]">Bangun komunitas petualangmu.</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIsGuildFormOpen((open) => !open)}
+                className="rounded-xl border border-[#66522c] bg-[#342b1b] px-3 py-2"
+              >
+                <Text className="text-[10px] font-black text-[#e7bd68]">
+                  {isGuildFormOpen ? 'Tutup' : 'Buat guild'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {isGuildFormOpen ? (
+              <View className="mb-5 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                <TextInput
+                  value={newGuildName}
+                  onChangeText={setNewGuildName}
+                  placeholder="Nama guild"
+                  placeholderTextColor="#77757d"
+                  className="h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                />
+                <TextInput
+                  value={newGuildDescription}
+                  onChangeText={setNewGuildDescription}
+                  placeholder="Deskripsi singkat (opsional)"
+                  placeholderTextColor="#77757d"
+                  className="mt-3 h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void handleCreateGuild()}
+                  className="mt-3 items-center rounded-xl bg-[#e7bd68] py-3"
+                >
+                  <Text className="text-xs font-black text-[#211c12]">Simpan guild</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {guildInvitations.length ? (
+              <View className="mb-6">
+                <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Undangan guild</Text>
+                <View className="gap-3">
+                  {guildInvitations.map((invitation) => (
+                    <View key={invitation.id} className="rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                      <Text className="text-sm font-bold text-[#f1ede4]">{invitation.guild_name}</Text>
+                      <Text className="mt-1 text-xs text-[#aaa49a]">
+                        Diundang oleh {invitation.inviter_name}
+                      </Text>
+                      <View className="mt-3 flex-row gap-2">
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleGuildInvitation(invitation.id, 'accept')}
+                          className="flex-1 items-center rounded-xl bg-[#8cbf9a] py-2.5"
+                        >
+                          <Text className="text-xs font-black text-[#15251a]">Gabung</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleGuildInvitation(invitation.id, 'reject')}
+                          className="flex-1 items-center rounded-xl border border-[#793e3e] bg-[#321f21] py-2.5"
+                        >
+                          <Text className="text-xs font-black text-[#f1a39a]">Tolak</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {guilds.length ? (
+              <View className="mb-6 gap-3">
+                {guilds.map((guild) => (
+                  <View key={guild.id} className="rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                    <View className="flex-row items-center">
+                      <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
+                        <FontAwesomeIcon icon={faShieldHalved} size={18} color="#e7bd68" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-base font-extrabold text-[#f5f0e6]">{guild.name}</Text>
+                        <Text className="mt-1 text-xs text-[#aaa49a]">
+                          {guild.member_count ?? 0}/{guild.max_members} anggota
+                        </Text>
+                      </View>
+                    </View>
+                    {guild.description ? (
+                      <Text className="mt-3 text-xs leading-5 text-[#aaa49a]">{guild.description}</Text>
+                    ) : null}
+                    <View className="mt-4 border-t border-[#3b3428] pt-4">
+                      <Text className="text-sm font-extrabold text-[#f5f0e6]">Misi guild</Text>
+                      {guild.missions?.length ? (
+                        <View className="mt-3 gap-2">
+                          {guild.missions.map((mission) => (
+                            <View key={mission.id} className="rounded-xl bg-[#1b1c22] p-3">
+                              <View className="flex-row items-center">
+                                <View className="flex-1">
+                                  <Text className="text-xs font-bold text-[#f1ede4]">{mission.title}</Text>
+                                  <Text className="mt-1 text-[10px] text-[#85838a]">
+                                    {mission.mission_date} · {mission.current_progress}/{mission.target_progress} progress · +{mission.reward_xp} XP
+                                  </Text>
+                                </View>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  onPress={() => void handleContributeGuildMission(guild.id, mission.id)}
+                                  className="rounded-lg bg-[#8cbf9a] px-3 py-2"
+                                >
+                                  <Text className="text-[10px] font-black text-[#15251a]">Kontribusi +1</Text>
+                                </Pressable>
+                              </View>
+                              <View className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#484132]">
+                                <View className="h-full rounded-full bg-[#e7bd68]" style={{ width: `${Math.min(100, (mission.current_progress / Math.max(1, mission.target_progress)) * 100)}%` }} />
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <Text className="mt-2 text-xs text-[#85838a]">Belum ada misi aktif.</Text>
+                      )}
+                    </View>
+                    {guild.owner_id === authUser?.id && friends.length ? (
+                      <View className="mt-4">
+                        <Text className="mb-2 text-xs font-bold text-[#c5beb0]">Undang teman</Text>
+                        <View className="gap-2">
+                          {friends.map((friend) => (
+                            <Pressable
+                              key={friend.id}
+                              accessibilityRole="button"
+                              onPress={() => void handleInviteToGuild(guild.id, friend.id)}
+                              className="flex-row items-center justify-between rounded-xl bg-[#1b1c22] px-3 py-2.5"
+                            >
+                              <Text className="text-xs text-[#f1ede4]">{friend.name}</Text>
+                              <Text className="text-[10px] font-black text-[#e7bd68]">Undang</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View className="mb-6 rounded-2xl border border-dashed border-[#49433a] bg-[#191a1f] p-4">
+                <Text className="text-sm text-[#85838a]">Kamu belum memiliki guild.</Text>
+              </View>
+            )}
+
+            <View className="mb-6 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+              <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Cari teman</Text>
+              <View className="flex-row gap-2">
+                <TextInput
+                  value={socialSearch}
+                  onChangeText={setSocialSearch}
+                  onSubmitEditing={() => void handleSocialSearch()}
+                  placeholder="Nama atau email"
+                  placeholderTextColor="#77757d"
+                  className="h-11 flex-1 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                  autoCapitalize="none"
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void handleSocialSearch()}
+                  className="h-11 items-center justify-center rounded-xl bg-[#e7bd68] px-4"
+                >
+                  <Text className="text-xs font-black text-[#211c12]">Cari</Text>
+                </Pressable>
+              </View>
+              {socialSearchResults.length ? (
+                <View className="mt-3 gap-2">
+                  {socialSearchResults.map((user) => (
+                    <View key={user.id} className="flex-row items-center rounded-xl bg-[#24252c] p-3">
+                      <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-[#3a3020]">
+                        <FontAwesomeIcon icon={faUser} size={14} color="#e7bd68" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-sm font-bold text-[#f1ede4]">{user.name}</Text>
+                        <Text className="mt-1 text-xs text-[#85838a]">{user.email}</Text>
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => void handleSendFriendRequest(user.id)}
+                        className="rounded-lg border border-[#66522c] bg-[#342b1b] px-3 py-2"
+                      >
+                        <Text className="text-[10px] font-black text-[#e7bd68]">Tambah</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+
+            <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">
+              Permintaan pertemanan {friendRequests.length ? `(${friendRequests.length})` : ''}
+            </Text>
+            {friendRequests.length ? (
+              <View className="mb-6 gap-3">
+                {friendRequests.map((request) => (
+                  <View key={request.id} className="rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                    <Text className="text-sm font-bold text-[#f1ede4]">{request.requester_name}</Text>
+                    <Text className="mt-1 text-xs text-[#aaa49a]">{request.requester_email}</Text>
+                    <View className="mt-3 flex-row gap-2">
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => void handleFriendRequest(request.id, 'accept')}
+                        className="flex-1 items-center rounded-xl bg-[#8cbf9a] py-2.5"
+                      >
+                        <Text className="text-xs font-black text-[#15251a]">Terima</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => void handleFriendRequest(request.id, 'reject')}
+                        className="flex-1 items-center rounded-xl border border-[#793e3e] bg-[#321f21] py-2.5"
+                      >
+                        <Text className="text-xs font-black text-[#f1a39a]">Tolak</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className="mb-6 text-sm text-[#85838a]">Belum ada permintaan baru.</Text>
+            )}
+
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-base font-extrabold text-[#f5f0e6]">Teman guild</Text>
+              <Text className="text-xs font-semibold text-[#85838a]">{friends.length} teman</Text>
+            </View>
+            {friends.length ? (
+              <View className="mb-6 gap-2">
+                {friends.map((friend) => (
+                  <View key={friend.id} className="flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+                    <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-[#243027]">
+                      <FontAwesomeIcon icon={faUsers} size={15} color="#8cbf9a" />
+                    </View>
+                    <View>
+                      <Text className="text-sm font-bold text-[#f1ede4]">{friend.name}</Text>
+                      <Text className="mt-1 text-xs text-[#85838a]">{friend.email}</Text>
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => void handleRemoveFriend(friend.id)}
+                      className="ml-auto rounded-lg px-2 py-1"
+                    >
+                      <Text className="text-[10px] font-bold text-[#f1a39a]">Hapus</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className="mb-6 text-sm text-[#85838a]">Belum ada teman. Mulai cari teman baru.</Text>
+            )}
+
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-base font-extrabold text-[#f5f0e6]">Party kamu</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIsPartyFormOpen((open) => !open)}
+                className="rounded-xl border border-[#66522c] bg-[#342b1b] px-3 py-2"
+              >
+                <Text className="text-[10px] font-black text-[#e7bd68]">{isPartyFormOpen ? 'Tutup' : 'Buat party'}</Text>
+              </Pressable>
+            </View>
+            {isPartyFormOpen ? (
+              <View className="mb-4 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                <TextInput
+                  value={newPartyName}
+                  onChangeText={setNewPartyName}
+                  placeholder="Nama party"
+                  placeholderTextColor="#77757d"
+                  className="h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void handleCreateParty()}
+                  className="mt-3 items-center rounded-xl bg-[#e7bd68] py-3"
+                >
+                  <Text className="text-xs font-black text-[#211c12]">Simpan party</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {isSocialLoading ? (
+              <Text className="py-4 text-center text-sm text-[#85838a]">Memuat data sosial...</Text>
+            ) : parties.length ? (
+              <View className="gap-3">
+                {parties.map((party) => (
+                  <View key={party.id} className="rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+                    <View className="flex-row items-center">
+                      <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#33291d]">
+                        <FontAwesomeIcon icon={faUsers} size={17} color="#e7bd68" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-sm font-bold text-[#f1ede4]">{party.name}</Text>
+                        <Text className="mt-1 text-xs text-[#85838a]">
+                          {party.member_count ?? 0}/{party.max_members} anggota
+                        </Text>
+                      </View>
+                    </View>
+                    {party.members?.length ? (
+                      <View className="mt-3 gap-1">
+                        {party.members.map((member) => (
+                          <View key={member.id} className="flex-row items-center justify-between rounded-lg bg-[#24252c] px-3 py-2">
+                            <Text className="text-xs text-[#c5beb0]">{member.name}</Text>
+                            {party.owner_id === authUser?.id && member.role !== 'owner' ? (
+                              <Pressable onPress={() => void handleRemovePartyMember(party.id, member.id)}>
+                                <Text className="text-[10px] font-bold text-[#f1a39a]">Keluarkan</Text>
+                              </Pressable>
+                            ) : null}
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                    {party.owner_id === authUser?.id && friends.length ? (
+                      <View className="mt-3 flex-row flex-wrap gap-1">
+                        {friends.slice(0, 3).map((friend) => (
+                          <Pressable
+                            key={friend.id}
+                            accessibilityRole="button"
+                            onPress={() => void handleAddPartyMember(party.id, friend.id)}
+                            className="rounded-lg bg-[#342b1b] px-2 py-1"
+                          >
+                            <Text className="text-[9px] font-bold text-[#e7bd68]">+ {friend.name}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className="text-sm text-[#85838a]">Belum ada party. Buat party pertamamu.</Text>
+            )}
           </>
         ) : (
           <>
@@ -1422,6 +2571,36 @@ export default function App() {
                     }}
                   />
                 </View>
+              </View>
+            </View>
+
+            <View className="mb-6 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+              <Text className="text-base font-extrabold text-[#f5f0e6]">Program affiliate</Text>
+              <Text className="mt-1 text-xs leading-5 text-[#aaa49a]">
+                Bagikan kode ini agar pengguna baru dapat terhubung sebagai referralmu.
+              </Text>
+              {affiliateProfile ? (
+                <Text className="mt-2 text-xs font-bold text-[#8cbf9a]">
+                  {affiliateProfile.referrals_count} referral berhasil terhubung
+                </Text>
+              ) : null}
+              <View className="mt-4 flex-row items-center rounded-xl border border-[#66522c] bg-[#342b1b] px-4 py-3">
+                <Text className="flex-1 text-lg font-black tracking-[2px] text-[#e7bd68]">
+                  {authUser?.affiliate_code || 'Belum tersedia'}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    if (authUser?.affiliate_code) {
+                      void Share.share({
+                        message: `Gunakan kode affiliate saya: ${authUser.affiliate_code}`,
+                      });
+                    }
+                  }}
+                  className="rounded-xl bg-[#e7bd68] px-4 py-2"
+                >
+                  <Text className="text-xs font-black text-[#211c12]">Bagikan</Text>
+                </Pressable>
               </View>
             </View>
 
@@ -1507,11 +2686,230 @@ export default function App() {
         )}
       </ScrollView>
 
+      {activeTab === 'Misi' && authSession ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tambah misi"
+          onPress={() => {
+            setMissionComposerType(null);
+            setIsMissionComposerOpen(true);
+          }}
+          className="absolute bottom-[78px] right-5 h-14 w-14 items-center justify-center rounded-full border-2 border-[#f5d98e] bg-[#e7bd68] shadow-lg"
+        >
+          <FontAwesomeIcon icon={faPlus} size={22} color="#211c12" />
+        </Pressable>
+      ) : null}
+
+      <Modal
+        visible={isMissionComposerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setMissionComposerType(null);
+          setIsMissionComposerOpen(false);
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <View className="max-h-[92%] rounded-t-[28px] border-t border-[#5a482a] bg-[#242118] px-5 pb-8 pt-5">
+            <View className="mb-5 flex-row items-center">
+              <View className="flex-1">
+                <Text className="text-xl font-black text-[#f5f0e6]">
+                  {missionComposerType ? 'Tambah misi' : 'Pilih jenis misi'}
+                </Text>
+                <Text className="mt-1 text-xs text-[#aaa49a]">
+                  {missionComposerType ? 'Isi detail misi dan tentukan waktu pelaksanaannya.' : 'Buat misi pribadi atau tantangan bersama guild.'}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tutup modal tambah misi"
+                onPress={() => {
+                  setMissionComposerType(null);
+                  setIsMissionComposerOpen(false);
+                }}
+                className="h-9 w-9 items-center justify-center rounded-full bg-[#342b1b]"
+              >
+                <Text className="text-lg font-bold text-[#e7bd68]">×</Text>
+              </Pressable>
+            </View>
+
+            {!missionComposerType ? (
+              <View className="gap-3">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setPersonalMissionError('');
+                    setMissionComposerType('personal');
+                  }}
+                  className="flex-row items-center rounded-2xl border border-[#5a482a] bg-[#342b1b] p-4"
+                >
+                  <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#4b3a22]">
+                    <FontAwesomeIcon icon={faFlag} size={18} color="#e7bd68" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-extrabold text-[#f5f0e6]">Misi pribadi</Text>
+                    <Text className="mt-1 text-xs text-[#aaa49a]">Tugas nyata dengan reward XP untuk dirimu.</Text>
+                  </View>
+                  <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setMissionComposerType('guild')}
+                  className="flex-row items-center rounded-2xl border border-[#5a482a] bg-[#342b1b] p-4"
+                >
+                  <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#4b3a22]">
+                    <FontAwesomeIcon icon={faUsers} size={18} color="#e7bd68" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-extrabold text-[#f5f0e6]">Misi guild</Text>
+                    <Text className="mt-1 text-xs text-[#aaa49a]">Tantangan kolaboratif untuk anggota guild.</Text>
+                  </View>
+                  <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
+                </Pressable>
+              </View>
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setMissionComposerType(null)}
+                  className="mb-4 self-start rounded-lg border border-[#66522c] px-3 py-2"
+                >
+                  <Text className="text-[10px] font-black text-[#e7bd68]">Ganti jenis misi</Text>
+                </Pressable>
+
+                {missionComposerType === 'personal' ? (
+                  <View>
+                    <TextInput
+                      value={personalMissionTitle}
+                      onChangeText={setPersonalMissionTitle}
+                      placeholder="Contoh: Selesaikan laporan kerja"
+                      placeholderTextColor="#77757d"
+                      className="h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                    />
+                    <TextInput
+                      value={personalMissionDetail}
+                      onChangeText={setPersonalMissionDetail}
+                      placeholder="Detail misi (opsional)"
+                      placeholderTextColor="#77757d"
+                      multiline
+                      className="mt-3 min-h-[62px] rounded-xl border border-[#34353d] bg-[#121318] px-3 py-3 text-sm text-[#f5f0e6]"
+                      textAlignVertical="top"
+                    />
+                    <View className="mt-3 flex-row gap-2">
+                      <View className="flex-1">
+                        <PickerField
+                          label="Tanggal"
+                          mode="date"
+                          value={parseDateValue(personalMissionDate)}
+                          onChange={(value) => setPersonalMissionDate(formatDateValue(value))}
+                        />
+                      </View>
+                      <View className="w-28">
+                        <PickerField
+                          label="Waktu"
+                          mode="time"
+                          value={parseTimeValue(personalMissionTime)}
+                          onChange={(value) => setPersonalMissionTime(formatTimeValue(value))}
+                        />
+                      </View>
+                    </View>
+                    <Text className="mb-1 mt-3 text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Reward XP</Text>
+                    <TextInput
+                      value={personalMissionReward}
+                      onChangeText={setPersonalMissionReward}
+                      placeholder="25"
+                      placeholderTextColor="#77757d"
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      className="h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => void handleCreatePersonalMission()}
+                      className="mt-4 items-center rounded-xl bg-[#e7bd68] py-3"
+                    >
+                      <Text className="text-xs font-black text-[#211c12]">Simpan misi pribadi</Text>
+                    </Pressable>
+                    {personalMissionError ? <Text className="mt-2 text-xs text-[#f1a39a]">{personalMissionError}</Text> : null}
+                  </View>
+                ) : (
+                  <View>
+                    {guilds.filter((guild) => guild.owner_id === authUser?.id).map((guild) => (
+                      <View key={guild.id} className="mb-3 rounded-xl border border-[#34353d] bg-[#1b1c22] p-3">
+                        <Text className="text-xs font-bold text-[#e7bd68]">{guild.name}</Text>
+                        <TextInput
+                          value={guildMissionTitle}
+                          onChangeText={setGuildMissionTitle}
+                          placeholder="Contoh: Selesaikan 5 tugas bersama"
+                          placeholderTextColor="#77757d"
+                          className="mt-2 h-10 rounded-lg border border-[#34353d] bg-[#121318] px-3 text-xs text-[#f5f0e6]"
+                        />
+                        <TextInput
+                          value={guildMissionDetail}
+                          onChangeText={setGuildMissionDetail}
+                          placeholder="Detail misi (opsional)"
+                          placeholderTextColor="#77757d"
+                          multiline
+                          className="mt-2 min-h-[58px] rounded-lg border border-[#34353d] bg-[#121318] px-3 py-2 text-xs text-[#f5f0e6]"
+                          textAlignVertical="top"
+                        />
+                        <View className="mt-2 flex-row gap-2">
+                          <View className="flex-1">
+                            <PickerField
+                              label="Tanggal"
+                              mode="date"
+                              value={parseDateValue(guildMissionDate)}
+                              onChange={(value) => setGuildMissionDate(formatDateValue(value))}
+                            />
+                          </View>
+                          <View className="w-28">
+                            <PickerField
+                              label="Waktu"
+                              mode="time"
+                              value={parseTimeValue(guildMissionTime)}
+                              onChange={(value) => setGuildMissionTime(formatTimeValue(value))}
+                            />
+                          </View>
+                        </View>
+                        <Text className="mb-1 mt-2 text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Reward XP per kontribusi</Text>
+                        <TextInput
+                          value={guildMissionReward}
+                          onChangeText={setGuildMissionReward}
+                          placeholder="25"
+                          placeholderTextColor="#77757d"
+                          keyboardType="number-pad"
+                          maxLength={3}
+                          className="h-10 rounded-lg border border-[#34353d] bg-[#121318] px-3 text-xs text-[#f5f0e6]"
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleCreateGuildMission(guild.id)}
+                          className="mt-2 items-center rounded-lg bg-[#e7bd68] py-2.5"
+                        >
+                          <Text className="text-[10px] font-black text-[#211c12]">Simpan misi guild</Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                    {!guilds.some((guild) => guild.owner_id === authUser?.id) ? (
+                      <Text className="text-xs text-[#85838a]">Kamu harus menjadi pemilik guild untuk membuat misi.</Text>
+                    ) : null}
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <MissionRewardModal
         mission={selectedMission}
         visible={Boolean(selectedMission)}
         onClose={() => setSelectedMission(null)}
         onComplete={(id) => void completeSelectedMission(id)}
+        onCancel={(id) => void cancelSelectedMission(id)}
       />
       <SkillUnlockModal
         reward={unlockedSkill}
