@@ -1,3 +1,7 @@
+## Bahasa Komunikasi
+
+- Gunakan Bahasa Indonesia untuk komunikasi, penjelasan perubahan, laporan validasi, dan respons kepada pengguna. Pertahankan Bahasa Inggris untuk kode, nama teknis, endpoint, field, dan konfigurasi yang memang harus mengikuti standar proyek.
+
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
 ## Expo has changed — do not trust your training data
