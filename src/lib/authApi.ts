@@ -472,7 +472,7 @@ export function getFriends(token: string) {
 }
 
 export function searchUsers(token: string, query: string) {
-  return request<{ message: string; users: { id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus }[] }>(
+  return request<{ message: string; users: { id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus; incoming_request_id?: number | null }[] }>(
     `/friends/search?q=${encodeURIComponent(query)}`,
     { token },
   );

@@ -1089,7 +1089,7 @@ export default function App() {
   const [guildInvitations, setGuildInvitations] = useState<GuildInvitation[]>([]);
   const [socialSearch, setSocialSearch] = useState('');
   const [socialSearchResults, setSocialSearchResults] = useState<
-    Array<{ id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus }>
+    Array<{ id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus; incoming_request_id?: number | null }>
   >([]);
   const [socialError, setSocialError] = useState('');
   const [isSocialLoading, setIsSocialLoading] = useState(false);
@@ -1494,12 +1494,14 @@ export default function App() {
     }
   }
 
-  async function handleSendFriendRequest(userId: number) {
+  async function handleSendFriendRequest(userId: number, incomingRequestId?: number | null) {
     if (!authSession) return;
     try {
-      const result = await sendFriendRequest(authSession.token, userId);
+      const result = incomingRequestId
+        ? await respondFriendRequest(authSession.token, incomingRequestId, 'accept').then(() => ({ data: { status: 'friends' as const } }))
+        : await sendFriendRequest(authSession.token, userId);
       const status = result.data?.status || 'request_sent';
-      setSocialError(status === 'friends' ? 'Kalian sekarang sudah berteman.' : 'Permintaan pertemanan berhasil dikirim.');
+      setSocialError(incomingRequestId || status === 'friends' ? 'Kalian sekarang sudah berteman.' : 'Permintaan pertemanan berhasil dikirim.');
       setSocialSearchResults((results) => results.map((user) => (
         user.id === userId ? { ...user, relationship_status: status } : user
       )));
@@ -2387,7 +2389,7 @@ export default function App() {
                       </View>
                       <Pressable
                         accessibilityRole="button"
-                        onPress={() => void handleSendFriendRequest(user.id)}
+                        onPress={() => void handleSendFriendRequest(user.id, user.incoming_request_id)}
                         disabled={isConnected || isRequestSent}
                         className={`rounded-lg border px-3 py-2 ${
                           isConnected
