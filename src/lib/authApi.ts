@@ -412,6 +412,8 @@ export type FriendRequest = {
   requester_email: string;
 };
 
+export type FriendRelationshipStatus = 'none' | 'friends' | 'request_sent' | 'request_received';
+
 export type Party = {
   id: number;
   name: string;
@@ -470,14 +472,14 @@ export function getFriends(token: string) {
 }
 
 export function searchUsers(token: string, query: string) {
-  return request<{ message: string; users: { id: number; name: string; email: string }[] }>(
+  return request<{ message: string; users: { id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus }[] }>(
     `/friends/search?q=${encodeURIComponent(query)}`,
     { token },
   );
 }
 
 export function sendFriendRequest(token: string, userId: number) {
-  return request<{ message: string }>('/friends/requests', {
+  return request<{ message: string; data?: { user_id: number; status: FriendRelationshipStatus } }>('/friends/requests', {
     method: 'POST',
     token,
     body: { user_id: userId },

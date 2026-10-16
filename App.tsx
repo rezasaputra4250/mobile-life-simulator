@@ -78,6 +78,7 @@ import {
   type AuthSession,
   type AuthUser,
   type FriendRequest,
+  type FriendRelationshipStatus,
   type InventoryData,
   type Mission,
   type MissionReward,
@@ -1088,7 +1089,7 @@ export default function App() {
   const [guildInvitations, setGuildInvitations] = useState<GuildInvitation[]>([]);
   const [socialSearch, setSocialSearch] = useState('');
   const [socialSearchResults, setSocialSearchResults] = useState<
-    Array<{ id: number; name: string; email: string }>
+    Array<{ id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus }>
   >([]);
   const [socialError, setSocialError] = useState('');
   const [isSocialLoading, setIsSocialLoading] = useState(false);
@@ -1496,9 +1497,12 @@ export default function App() {
   async function handleSendFriendRequest(userId: number) {
     if (!authSession) return;
     try {
-      await sendFriendRequest(authSession.token, userId);
-      setSocialError('Permintaan pertemanan berhasil dikirim.');
-      setSocialSearchResults((results) => results.filter((user) => user.id !== userId));
+      const result = await sendFriendRequest(authSession.token, userId);
+      const status = result.data?.status || 'request_sent';
+      setSocialError(status === 'friends' ? 'Kalian sekarang sudah berteman.' : 'Permintaan pertemanan berhasil dikirim.');
+      setSocialSearchResults((results) => results.map((user) => (
+        user.id === userId ? { ...user, relationship_status: status } : user
+      )));
       await refreshSocial();
     } catch (error) {
       setSocialError(error instanceof Error ? error.message : 'Permintaan pertemanan gagal.');
@@ -2367,10 +2371,15 @@ export default function App() {
               </View>
               {socialSearchResults.length ? (
                 <View className="mt-3 gap-2">
-                  {socialSearchResults.map((user) => (
+                  {socialSearchResults.map((user) => {
+                    const relationshipStatus = user.relationship_status || 'none';
+                    const isConnected = relationshipStatus === 'friends';
+                    const isRequestSent = relationshipStatus === 'request_sent';
+                    const isRequestReceived = relationshipStatus === 'request_received';
+                    return (
                     <View key={user.id} className="flex-row items-center rounded-xl bg-[#24252c] p-3">
                       <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-[#3a3020]">
-                        <FontAwesomeIcon icon={faUser} size={14} color="#e7bd68" />
+                        <FontAwesomeIcon icon={faUser} size={14} color={isConnected ? '#8cbf9a' : '#e7bd68'} />
                       </View>
                       <View className="flex-1">
                         <Text className="text-sm font-bold text-[#f1ede4]">{user.name}</Text>
@@ -2379,12 +2388,22 @@ export default function App() {
                       <Pressable
                         accessibilityRole="button"
                         onPress={() => void handleSendFriendRequest(user.id)}
-                        className="rounded-lg border border-[#66522c] bg-[#342b1b] px-3 py-2"
+                        disabled={isConnected || isRequestSent}
+                        className={`rounded-lg border px-3 py-2 ${
+                          isConnected
+                            ? 'border-[#42684d] bg-[#243027]'
+                            : isRequestSent
+                              ? 'border-[#66522c] bg-[#2b251a]'
+                              : 'border-[#66522c] bg-[#342b1b]'
+                        }`}
                       >
-                        <Text className="text-[10px] font-black text-[#e7bd68]">Tambah</Text>
+                        <Text className={`text-[10px] font-black ${isConnected ? 'text-[#8cbf9a]' : 'text-[#e7bd68]'}`}>
+                          {isConnected ? 'Sudah berteman' : isRequestSent ? 'Terkirim' : isRequestReceived ? 'Terima' : 'Tambah'}
+                        </Text>
                       </Pressable>
                     </View>
-                  ))}
+                    );
+                  })}
                 </View>
               ) : null}
             </View>
