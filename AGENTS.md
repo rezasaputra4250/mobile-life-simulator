@@ -1,6 +1,7 @@
 ## Bahasa Komunikasi
 
 - Gunakan Bahasa Indonesia untuk komunikasi, penjelasan perubahan, laporan validasi, dan respons kepada pengguna. Pertahankan Bahasa Inggris untuk kode, nama teknis, endpoint, field, dan konfigurasi yang memang harus mengikuti standar proyek.
+- Setelah setiap perubahan selesai, termasuk perubahan kecil, jalankan lint atau validasi yang relevan lalu buat commit dengan pesan yang jelas.
 
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
