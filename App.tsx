@@ -31,6 +31,9 @@ import {
   faTrophy,
   faUser,
   faUsers,
+  faUserGroup,
+  faWallet,
+  faStore,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   KeyboardAvoidingView,
@@ -54,6 +57,8 @@ import {
   contributeGuildMission,
   getFriends,
   getInventory,
+  getFinanceSummary,
+  getFinanceTransactions,
   getDifficultyConfigs,
   getExperienceHistory,
   getProgression,
@@ -87,6 +92,8 @@ import {
   type FriendRequest,
   type FriendRelationshipStatus,
   type InventoryData,
+  type FinanceSummary,
+  type FinanceTransaction,
   type Mission,
   type MissionReward,
   type Friend,
@@ -248,6 +255,14 @@ function formatDifficulty(value?: Difficulty) {
   if (value === 'hard') return 'Hard';
   if (value === 'expert') return 'Expert';
   return 'Easy';
+}
+
+function formatCurrency(value: number, currency = 'IDR') {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }
 
 function PickerField({
@@ -1419,6 +1434,9 @@ export default function App() {
   });
   const [isInventoryLoading, setIsInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState('');
+  const [finance, setFinance] = useState<FinanceSummary | null>(null);
+  const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>([]);
+  const [financeError, setFinanceError] = useState('');
   const [affiliateProfile, setAffiliateProfile] = useState<AffiliateProfile | null>(null);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [todoTitle, setTodoTitle] = useState('');
@@ -1582,6 +1600,33 @@ export default function App() {
     }
 
     void loadMissions();
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession) return;
+    const token = authSession.token;
+    let isMounted = true;
+
+    async function loadFinance() {
+      try {
+        const [summaryResult, transactionsResult] = await Promise.all([
+          getFinanceSummary(token),
+          getFinanceTransactions(token),
+        ]);
+        if (isMounted) {
+          setFinance(summaryResult);
+          setFinanceTransactions(transactionsResult.transactions);
+          setFinanceError('');
+        }
+      } catch (error) {
+        if (isMounted) setFinanceError(error instanceof Error ? error.message : 'Data dompet belum dapat dimuat.');
+      }
+    }
+
+    void loadFinance();
     return () => {
       isMounted = false;
     };
@@ -2316,13 +2361,37 @@ export default function App() {
               icon={faUsers}
               label="Guild"
               accessibilityLabel="Buka menu Guild"
-              onPress={() => setActiveTab('Guild')}
+              onPress={() => {
+                setSocialView('guild');
+                setActiveTab('Guild');
+              }}
+            />
+            <HomeMenuCard
+              icon={faUserGroup}
+              label="Pertemanan"
+              accessibilityLabel="Buka menu Pertemanan"
+              onPress={() => {
+                setSocialView('friends');
+                setActiveTab('Pertemanan');
+              }}
             />
             <HomeMenuCard
               icon={faScroll}
               label="Inventaris"
               accessibilityLabel="Buka menu Inventaris"
               onPress={() => setActiveTab('Inventaris')}
+            />
+            <HomeMenuCard
+              icon={faWallet}
+              label="Dompet"
+              accessibilityLabel="Buka menu Dompet"
+              onPress={() => setActiveTab('Dompet')}
+            />
+            <HomeMenuCard
+              icon={faStore}
+              label="Belanja"
+              accessibilityLabel="Buka menu Belanja"
+              onPress={() => setActiveTab('Belanja')}
             />
           </View>
         </View>
@@ -2484,6 +2553,73 @@ export default function App() {
             )}
 
           </>
+        ) : activeTab === 'Dompet' ? (
+          <>
+            <View className="mb-6">
+              <Text className="text-2xl font-black text-[#f5f0e6]">Dompet Petualang</Text>
+              <Text className="mt-2 text-sm leading-5 text-[#929097]">
+                Pantau saldo dan perjalanan keuangan karaktermu.
+              </Text>
+            </View>
+            {financeError ? <Text className="mb-4 rounded-xl bg-[#321f21] p-3 text-xs leading-5 text-[#f1a39a]">{financeError}</Text> : null}
+            <View className="mb-4 rounded-3xl border border-[#66522c] bg-[#342b1b] p-5">
+              <View className="flex-row items-center">
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#49391e]">
+                  <FontAwesomeIcon icon={faWallet} size={18} color="#e7bd68" />
+                </View>
+                <Text className="text-xs font-bold uppercase tracking-[1.2px] text-[#c5a85f]">Saldo tersedia</Text>
+              </View>
+              <Text className="mt-5 text-3xl font-black text-[#fff8e9]">
+                {formatCurrency(finance?.wallet.balance ?? 0, finance?.wallet.currency ?? 'IDR')}
+              </Text>
+            </View>
+            <View className="mb-6 flex-row gap-3">
+              <View className="flex-1 rounded-2xl border border-[#314c3b] bg-[#1d2b22] p-4">
+                <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#8cbf9a]">Pemasukan</Text>
+                <Text className="mt-2 text-sm font-black text-[#d9f0df]">{formatCurrency(finance?.totals.total_income ?? 0)}</Text>
+              </View>
+              <View className="flex-1 rounded-2xl border border-[#553536] bg-[#2b2022] p-4">
+                <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#f1a39a]">Pengeluaran</Text>
+                <Text className="mt-2 text-sm font-black text-[#f5d5d0]">{formatCurrency(finance?.totals.total_expense ?? 0)}</Text>
+              </View>
+            </View>
+            <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Transaksi terbaru</Text>
+            {financeTransactions.length ? financeTransactions.map((transaction) => (
+              <View key={transaction.id} className="mb-2 flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+                <View className={`mr-3 h-9 w-9 items-center justify-center rounded-full ${transaction.type === 'income' ? 'bg-[#243027]' : 'bg-[#321f21]'}`}>
+                  <FontAwesomeIcon icon={transaction.type === 'income' ? faArrowRight : faArrowLeft} size={13} color={transaction.type === 'income' ? '#8cbf9a' : '#f1a39a'} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-[#f1ede4]">{transaction.category}</Text>
+                  <Text className="mt-1 text-xs text-[#85838a]">{transaction.description || 'Transaksi keuangan'}</Text>
+                </View>
+                <Text className={`text-xs font-black ${transaction.type === 'income' ? 'text-[#8cbf9a]' : 'text-[#f1a39a]'}`}>
+                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                </Text>
+              </View>
+            )) : (
+              <Text className="rounded-2xl border border-dashed border-[#49433a] p-4 text-sm text-[#85838a]">Belum ada transaksi.</Text>
+            )}
+          </>
+        ) : activeTab === 'Belanja' ? (
+          <>
+            <View className="mb-6">
+              <Text className="text-2xl font-black text-[#f5f0e6]">Belanja</Text>
+              <Text className="mt-2 text-sm leading-5 text-[#929097]">Perlengkapi petualanganmu dengan item yang tepat.</Text>
+            </View>
+            <View className="mb-4 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+              <View className="flex-row items-center">
+                <FontAwesomeIcon icon={faWallet} size={17} color="#e7bd68" />
+                <Text className="ml-3 flex-1 text-sm font-bold text-[#f5f0e6]">Saldo dompet</Text>
+                <Text className="text-sm font-black text-[#e7bd68]">{formatCurrency(finance?.wallet.balance ?? 0, finance?.wallet.currency ?? 'IDR')}</Text>
+              </View>
+            </View>
+            <View className="items-center rounded-3xl border border-dashed border-[#49433a] bg-[#191a1f] px-6 py-10">
+              <FontAwesomeIcon icon={faStore} size={28} color="#e7bd68" />
+              <Text className="mt-4 text-base font-extrabold text-[#f5f0e6]">Toko segera dibuka</Text>
+              <Text className="mt-2 text-center text-xs leading-5 text-[#85838a]">Katalog item, harga, dan pembelian akan hadir di pembaruan berikutnya.</Text>
+            </View>
+          </>
         ) : activeTab === 'Inventaris' ? (
           <>
             <View className="mb-6">
@@ -2615,12 +2751,12 @@ export default function App() {
               </Text>
             </View>
           </>
-        ) : activeTab === 'Guild' ? (
+        ) : activeTab === 'Guild' || activeTab === 'Pertemanan' ? (
           <>
             <View className="mb-6">
-                <Text className="text-2xl font-black text-[#f5f0e6]">Sosial</Text>
+                <Text className="text-2xl font-black text-[#f5f0e6]">{activeTab === 'Guild' ? 'Guild' : 'Pertemanan'}</Text>
               <Text className="mt-2 text-sm leading-5 text-[#929097]">
-                Kelola guild dan pertemananmu di ruang sosial petualang.
+                {activeTab === 'Guild' ? 'Bangun komunitas dan selesaikan misi bersama.' : 'Temukan teman dan bangun party petualangmu.'}
               </Text>
             </View>
 

@@ -128,6 +128,29 @@ export type InventoryData = {
   totals: { items: number; badges: number };
 };
 
+export type FinanceWallet = {
+  id: number | null;
+  balance: number;
+  currency: string;
+  updated_at?: string;
+};
+
+export type FinanceTransaction = {
+  id: number;
+  type: 'income' | 'expense';
+  amount: number;
+  balance_after: number;
+  category: string;
+  description?: string | null;
+  occurred_at: string;
+  created_at?: string;
+};
+
+export type FinanceSummary = {
+  wallet: FinanceWallet;
+  totals: { total_income: number; total_expense: number };
+};
+
 export type Todo = {
   id: number;
   title: string;
@@ -437,6 +460,14 @@ export function cancelMission(token: string, missionId: number) {
 
 export function getInventory(token: string) {
   return request<{ message: string } & InventoryData>('/inventory', { token });
+}
+
+export function getFinanceSummary(token: string) {
+  return request<{ message: string } & FinanceSummary>('/finance', { token });
+}
+
+export function getFinanceTransactions(token: string, limit = 10) {
+  return request<{ message: string; transactions: FinanceTransaction[] }>(`/finance/transactions?limit=${limit}`, { token });
 }
 
 export function getTodos(token: string) {
