@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   getCurrentUser,
@@ -88,9 +88,9 @@ export default function ProfileDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Link href="/" asChild>
-        <Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali ke profil</Text></Pressable>
-      </Link>
+      <Pressable onPress={() => router.back()}>
+        <Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali ke profil</Text>
+      </Pressable>
       <Text className="text-3xl font-black text-[#f5f0e6]">{title}</Text>
       {message ? <Text className="mt-3 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
 

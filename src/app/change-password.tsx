@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, TextInput } from 'react-native';
 import { changePassword } from '../lib/authApi';
 
@@ -31,7 +31,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Link href="/" asChild><Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali ke profil</Text></Pressable></Link>
+      <Pressable onPress={() => router.back()}><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali ke profil</Text></Pressable>
       <Text className="text-3xl font-black text-[#f5f0e6]">Ganti password</Text>
       <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Gunakan password minimal 8 karakter dan jangan gunakan password yang sama di tempat lain.</Text>
       <TextInput value={currentPassword} onChangeText={setCurrentPassword} placeholder="Password saat ini" placeholderTextColor="#77757d" secureTextEntry className="mt-6 rounded-xl border border-[#5a482a] bg-[#242118] px-4 py-3 text-[#f5f0e6]" />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   getExperienceHistory,
@@ -67,9 +67,9 @@ export default function ProgressionScreen() {
 
   return (
     <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Link href="/" asChild>
-        <Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali</Text></Pressable>
-      </Link>
+      <Pressable onPress={() => router.back()}>
+        <Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali</Text>
+      </Pressable>
       <Text className="text-3xl font-black text-[#f5f0e6]">Progression</Text>
       <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Pantau level, class, kemampuan, dan perjalanan EXP karaktermu.</Text>
       {message ? <Text className="mt-4 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
