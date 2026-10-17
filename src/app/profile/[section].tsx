@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   getCurrentUser,
@@ -14,6 +14,7 @@ import {
   type InventoryData,
   type Progression,
 } from '../../lib/authApi';
+import { ProfilePageHeader } from '../../components/ProfilePageHeader';
 
 const difficultyLabels: Record<Difficulty, string> = {
   easy: 'Mudah',
@@ -88,10 +89,10 @@ export default function ProfileDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Pressable onPress={() => router.back()}>
-        <Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali ke profil</Text>
-      </Pressable>
-      <Text className="text-3xl font-black text-[#f5f0e6]">{title}</Text>
+      <ProfilePageHeader
+        title={title}
+        subtitle={section === 'difficulty' ? 'Atur tingkat tantangan untuk misi baru.' : 'Lihat ringkasan perkembangan karaktermu.'}
+      />
       {message ? <Text className="mt-3 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
 
       {section === 'difficulty' ? (
