@@ -566,11 +566,13 @@ function GameStatRow({ label, value }: { label: string; value: number }) {
 
 function SkillCard({
   label,
+  description,
   level,
   experience,
   experienceToNextLevel,
 }: {
   label: string;
+  description?: string | null;
   level: number;
   experience: number;
   experienceToNextLevel: number;
@@ -586,6 +588,7 @@ function SkillCard({
         <Text className="text-sm font-extrabold text-[#f1ede4]">{label}</Text>
         <Text className="text-xs font-black text-[#e7bd68]">Lv. {level}</Text>
       </View>
+      {description ? <Text className="mb-2 text-xs leading-5 text-[#aaa49a]">{description}</Text> : null}
       <View className="mb-2 h-2 overflow-hidden rounded-full bg-[#484132]">
         <View
           className="h-full rounded-full bg-[#8cbf9a]"
@@ -3227,6 +3230,7 @@ export default function App() {
                 <SkillCard
                   key={skill.id}
                   label={skill.label}
+                  description={skill.description}
                   level={skill.level}
                   experience={skill.experience}
                   experienceToNextLevel={skill.experience_to_next_level}

@@ -98,6 +98,7 @@ export default function ProgressionScreen() {
                 <Text className="text-sm font-bold text-[#f1ede4]">{skill.label}</Text>
                 <Text className="text-xs font-black text-[#e7bd68]">Lv. {skill.level}</Text>
               </View>
+              {skill.description ? <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">{skill.description}</Text> : null}
               <Text className="mt-2 text-xs text-[#85838a]">{skill.experience} / {skill.experience_to_next_level} EXP</Text>
               <View className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#484132]">
                 <View className="h-full rounded-full bg-[#8cbf9a]" style={{ width: `${Math.min(100, (skill.experience / Math.max(1, skill.experience_to_next_level)) * 100)}%` }} />
