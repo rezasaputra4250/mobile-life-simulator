@@ -1967,7 +1967,7 @@ export default function App() {
 
         <View className="mb-6">
           <Text className="mb-3 text-xl font-extrabold text-[#f5f0e6]">Menu petualangan</Text>
-          <View className="flex-row gap-3">
+          <View className="flex-row flex-wrap justify-between gap-y-3">
             <HomeMenuCard
               icon={faFlag}
               label="Misi"
@@ -1982,8 +1982,6 @@ export default function App() {
               accessibilityLabel="Buka menu Jurnal"
               onPress={() => setActiveTab('Jurnal')}
             />
-          </View>
-          <View className="mt-3 flex-row gap-3">
             <HomeMenuCard
               icon={faUsers}
               label="Guild"
