@@ -79,7 +79,7 @@ export default function ProfileDetailScreen() {
   }
 
   const title = section === 'difficulty'
-    ? 'Difficulty'
+    ? 'Ganti difficulty'
     : section === 'stats'
       ? 'Statistik player'
       : section === 'badges'

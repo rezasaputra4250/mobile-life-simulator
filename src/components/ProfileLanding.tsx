@@ -63,7 +63,7 @@ export function ProfileLanding({
         <ProfileOptionCard icon={faShieldHalved} label="Ganti class" description="Sesuaikan pekerjaan dan bonus karakter dengan kondisimu." />
       </Link>
       <Link href="/profile/difficulty" asChild>
-        <ProfileOptionCard icon={faGaugeHigh} label="Difficulty" description="Atur tingkat tantangan mission baru." />
+        <ProfileOptionCard icon={faGaugeHigh} label="Ganti difficulty" description="Sesuaikan tingkat tantangan misi baru dengan kondisimu." />
       </Link>
       <Link href="/profile/skills" asChild>
         <ProfileOptionCard icon={faStar} label="Kemampuan" description="Lihat kemampuan dan progres EXP kemampuan." />
