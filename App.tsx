@@ -100,6 +100,7 @@ import {
 } from './src/lib/authApi';
 import { HomeMenuCard } from './src/components/HomeMenuCard';
 import { RadarCard, type RadarAxis } from './src/components/RadarChart';
+import { ProfileLanding } from './src/components/ProfileLanding';
 import './global.css';
 
 const initialMissions: Mission[] = [
@@ -2634,6 +2635,15 @@ export default function App() {
               </>
             )}
           </>
+        ) : activeTab === 'Profil' ? (
+          <ProfileLanding
+            user={authUser}
+            level={userLevel}
+            currentExperience={levelProgress.currentExperience}
+            requiredExperience={levelProgress.requiredExperience}
+            progressPercentage={levelProgress.percentage}
+            onLogout={() => void handleLogout()}
+          />
         ) : (
           <>
             <View className="mb-6">

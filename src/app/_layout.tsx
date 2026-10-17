@@ -8,6 +8,7 @@ export default function RootLayout() {
       <Stack.Screen name="classes" />
       <Stack.Screen name="missions" />
       <Stack.Screen name="progression" />
+      <Stack.Screen name="profile/[section]" />
     </Stack>
   );
 }
