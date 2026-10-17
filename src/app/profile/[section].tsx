@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -76,6 +76,7 @@ export default function ProfileDetailScreen() {
       setUser((current) => current ? { ...current, difficulty } : current);
       setProgression((await getProgression(token)).data);
       setMessage('Difficulty berhasil diperbarui.');
+      router.back();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Difficulty belum dapat diperbarui.');
     } finally {
