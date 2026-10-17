@@ -1971,28 +1971,24 @@ export default function App() {
             <HomeMenuCard
               icon={faFlag}
               label="Misi"
-              summary={`${completedMissions}/${missions.length} selesai`}
               accessibilityLabel="Buka menu Misi"
               onPress={() => setActiveTab('Misi')}
             />
             <HomeMenuCard
               icon={faBookOpen}
               label="Jurnal"
-              summary={`${completedMissions} aktivitas selesai`}
               accessibilityLabel="Buka menu Jurnal"
               onPress={() => setActiveTab('Jurnal')}
             />
             <HomeMenuCard
               icon={faUsers}
               label="Guild"
-              summary={`${guilds.length} guild diikuti`}
               accessibilityLabel="Buka menu Guild"
               onPress={() => setActiveTab('Guild')}
             />
             <HomeMenuCard
               icon={faScroll}
               label="Inventaris"
-              summary={`${inventory.totals.items} item · ${inventory.totals.badges} badge`}
               accessibilityLabel="Buka menu Inventaris"
               onPress={() => setActiveTab('Inventaris')}
             />
