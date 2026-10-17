@@ -1736,15 +1736,17 @@ export default function App() {
       if (result.reward?.type === 'skill') setUnlockedSkill(result.reward);
       if (authSession) {
         try {
-          const [profileResult, inventoryResult, missionsResult] = await Promise.all([
+          const [profileResult, inventoryResult, missionsResult, historyResult] = await Promise.all([
             getCurrentUser(authSession.token),
             getInventory(authSession.token),
             getMissions(authSession.token),
+            getExperienceHistory(authSession.token),
           ]);
           setAuthUser(profileResult.user);
           setInventory(inventoryResult);
           setMissions(missionsResult.missions);
           setStreakDays(missionsResult.stats?.streak_days ?? 0);
+          setExperienceHistory(historyResult.data);
         } catch (error) {
           setMissionError(
             error instanceof Error ? error.message : 'Data karakter belum dapat diperbarui.',
@@ -1773,15 +1775,17 @@ export default function App() {
         ),
       );
       setSelectedMission(null);
-      const [profileResult, inventoryResult, missionsResult] = await Promise.all([
+      const [profileResult, inventoryResult, missionsResult, historyResult] = await Promise.all([
         getCurrentUser(authSession.token),
         getInventory(authSession.token),
         getMissions(authSession.token),
+        getExperienceHistory(authSession.token),
       ]);
       setAuthUser(profileResult.user);
       setInventory(inventoryResult);
       setMissions(missionsResult.missions);
       setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setExperienceHistory(historyResult.data);
       setMissionError('');
     } catch (error) {
       setMissionError(error instanceof Error ? error.message : 'Pembatalan misi gagal.');
