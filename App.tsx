@@ -269,15 +269,17 @@ function PickerField({
   label,
   value,
   mode,
+  placeholder,
   onChange,
 }: {
   label: string;
   value: Date;
   mode: 'date' | 'time';
+  placeholder?: string;
   onChange: (value: Date) => void;
 }) {
   const [visible, setVisible] = useState(false);
-  const displayValue = mode === 'date' ? formatDateValue(value) : formatTimeValue(value);
+  const displayValue = placeholder || (mode === 'date' ? formatDateValue(value) : formatTimeValue(value));
 
   return (
     <>
@@ -297,8 +299,9 @@ function PickerField({
                 value={value}
                 mode={mode}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onValueChange={(_event, selectedValue) => {
+                onChange={(_event, selectedValue) => {
                   if (selectedValue) onChange(selectedValue);
+                  if (Platform.OS !== 'ios') setVisible(false);
                 }}
                 onDismiss={() => setVisible(false)}
                 textColor="#f5f0e6"
@@ -994,6 +997,7 @@ function AuthScreen({
                     label="Tanggal lahir"
                     value={birthDate ? parseDateValue(birthDate) : new Date(2000, 0, 1)}
                     mode="date"
+                    placeholder={birthDate ? undefined : 'Pilih tanggal lahir'}
                     onChange={(value) => setBirthDate(formatDateValue(value))}
                   />
                 </View>
