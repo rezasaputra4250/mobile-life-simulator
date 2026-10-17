@@ -1148,6 +1148,13 @@ const onboardingDifficultyLabels: Record<Difficulty, string> = {
   expert: 'Expert',
 };
 
+const difficultyDescriptions: Record<Difficulty, string> = {
+  easy: 'Cocok untuk memulai kebiasaan dengan target yang ringan dan konsisten.',
+  normal: 'Tantangan seimbang untuk rutinitas yang sudah mulai stabil.',
+  hard: 'Target lebih menantang untuk mendorong disiplin dan perkembangan lebih cepat.',
+  expert: 'Untuk petualang berpengalaman yang siap menghadapi target paling berat.',
+};
+
 function OnboardingScreen({
   token,
   step,
@@ -1161,7 +1168,6 @@ function OnboardingScreen({
   onCompleted: () => Promise<void>;
   onBackToLogin: () => Promise<void>;
 }) {
-  const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
   const [classes, setClasses] = useState<{
     id: number;
     label: string;
@@ -1183,10 +1189,7 @@ function OnboardingScreen({
     let mounted = true;
     void (async () => {
       try {
-        if (step === 'difficulty') {
-          const result = await getDifficultyConfigs(token);
-          if (mounted) setDifficultyConfigs(result.data);
-        } else {
+        if (step === 'class') {
           const result = await getClasses(token);
           if (mounted) setClasses(result.data);
         }
@@ -1254,8 +1257,8 @@ function OnboardingScreen({
                 >
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base font-black text-[#f5f0e6]">{onboardingDifficultyLabels[difficulty]}</Text>
-                    <Text className="text-sm font-black text-[#e7bd68]">+{difficultyConfigs.find((item) => item.difficulty === difficulty)?.base_reward_xp ?? '—'} XP</Text>
                   </View>
+                  <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">{difficultyDescriptions[difficulty]}</Text>
                 </Pressable>
               ))}
             </View>
@@ -2965,8 +2968,8 @@ export default function App() {
                     <Text className={`text-center text-[10px] font-black ${activeDifficulty === difficulty ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>
                       {formatDifficulty(difficulty)}
                     </Text>
-                    <Text className="mt-1 text-center text-[9px] text-[#aaa49a]">
-                      +{difficultyConfigs.find((item) => item.difficulty === difficulty)?.base_reward_xp ?? '—'} XP
+                    <Text className="mt-1 text-center text-[9px] leading-3 text-[#aaa49a]">
+                      {difficultyDescriptions[difficulty]}
                     </Text>
                   </Pressable>
                 ))}
