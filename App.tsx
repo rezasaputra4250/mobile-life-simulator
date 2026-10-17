@@ -1176,11 +1176,6 @@ export default function App() {
     ? missions.filter((mission) => !mission.difficulty || mission.difficulty === activeDifficulty)
     : missions;
   const completedMissions = availableMissions.filter((mission) => mission.completed).length;
-  const totalMissionXp = availableMissions.reduce(
-    (total, mission) =>
-      total + (mission.completed && mission.reward.type === 'xp' ? mission.reward.amount : 0),
-    0,
-  );
   const userLevel = authUser?.stats?.level ?? authUser?.level ?? 12;
   const userExperience = authUser?.stats?.experience ?? authUser?.experience ?? 0;
   const nextLevelExperience =
@@ -1912,61 +1907,6 @@ export default function App() {
             </View>
           </View>
 
-          <View className="mb-2 flex-row items-center justify-between">
-            <Text className="text-xs font-semibold text-[#c5beb0]">Progres misi</Text>
-            <Text className="text-xs font-extrabold text-[#e7bd68]">
-              {completedMissions}/{availableMissions.length} selesai
-            </Text>
-          </View>
-          <View className="h-[7px] overflow-hidden rounded-full bg-[#484132]">
-            <View
-              className="h-full rounded-full bg-[#e7bd68]"
-              style={{ width: `${availableMissions.length ? (completedMissions / availableMissions.length) * 100 : 0}%` }}
-            />
-          </View>
-        </View>
-
-        <Link href="/classes" asChild>
-          <Pressable className="mb-5 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
-            <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
-              <FontAwesomeIcon icon={faShieldHalved} size={18} color="#e7bd68" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm font-extrabold text-[#f5f0e6]">Class karakter</Text>
-              <Text className="mt-1 text-xs text-[#aaa49a]">Pilih jalur perkembangan petualangmu.</Text>
-            </View>
-            <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
-          </Pressable>
-        </Link>
-
-        <View className="mb-7 flex-row gap-3">
-          <View className="flex-1 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
-            <View className="mb-3 h-9 w-9 items-center justify-center rounded-xl bg-[#33291d]">
-              <FontAwesomeIcon icon={faStar} size={16} color="#e7bd68" />
-            </View>
-            <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-[#85838a]">
-              Level
-            </Text>
-            <Text className="mt-1 text-xl font-extrabold text-[#f5f0e6]">{userLevel}</Text>
-          </View>
-          <View className="flex-1 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
-            <View className="mb-3 h-9 w-9 items-center justify-center rounded-xl bg-[#33291d]">
-              <FontAwesomeIcon icon={faFire} size={16} color="#e87959" />
-            </View>
-            <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-[#85838a]">
-              Streak
-            </Text>
-            <Text className="mt-1 text-xl font-extrabold text-[#f5f0e6]">{streakDays} hari</Text>
-          </View>
-          <View className="flex-1 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
-            <View className="mb-3 h-9 w-9 items-center justify-center rounded-xl bg-[#33291d]">
-              <FontAwesomeIcon icon={faShieldHalved} size={16} color="#8cbf9a" />
-            </View>
-            <Text className="text-[10px] font-bold uppercase tracking-[1.2px] text-[#85838a]">
-              XP hari ini
-            </Text>
-            <Text className="mt-1 text-xl font-extrabold text-[#f5f0e6]">+{totalMissionXp}</Text>
-          </View>
         </View>
 
         <View className="mb-6">
@@ -2015,37 +1955,6 @@ export default function App() {
           />
         </View>
 
-        <View className="mb-4 flex-row items-center justify-between">
-          <View>
-            <Text className="text-xl font-extrabold text-[#f5f0e6]">Papan misi</Text>
-            <Text className="mt-1 text-xs text-[#85838a]">Tuntaskan misi, kumpulkan XP.</Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tambah misi pribadi"
-            onPress={() => {
-              setMissionCategory('personal');
-              setActiveTab('Misi');
-              setMissionComposerType(null);
-              setIsMissionComposerOpen(true);
-            }}
-            className="h-10 w-10 items-center justify-center rounded-xl border border-[#5a482a] bg-[#2b251a]"
-          >
-            <FontAwesomeIcon icon={faPlus} size={16} color="#e7bd68" />
-          </Pressable>
-        </View>
-
-        {isMissionLoading ? (
-          <Text className="py-4 text-center text-sm text-[#85838a]">Memuat data misi...</Text>
-        ) : availableMissions.length ? (
-          <View className="gap-3">
-            {availableMissions.slice(0, 3).map((mission) => (
-              <MissionCard key={mission.id} mission={mission} onPress={openMissionDetails} />
-            ))}
-          </View>
-        ) : (
-          <Text className="py-4 text-center text-sm text-[#85838a]">Belum ada misi.</Text>
-        )}
           </>
         ) : activeTab === 'Misi' ? (
           <>
