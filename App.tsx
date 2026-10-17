@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
-import { Link } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -1578,6 +1578,25 @@ export default function App() {
       isMounted = false;
     };
   }, [authSession]);
+
+  useFocusEffect(useCallback(() => {
+    if (!authSession) return undefined;
+    let isMounted = true;
+    void Promise.all([
+      getCurrentUser(authSession.token),
+      getProgression(authSession.token),
+    ]).then(([profileResult, progressionResult]) => {
+      if (!isMounted) return;
+      setAuthUser(profileResult.user);
+      setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+      setProgression(progressionResult.data);
+    }).catch(() => {
+      // The existing dashboard data remains visible if a focus refresh fails.
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]));
 
   useEffect(() => {
     if (!authSession) return;
