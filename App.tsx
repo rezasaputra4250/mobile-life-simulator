@@ -1148,13 +1148,6 @@ const onboardingDifficultyLabels: Record<Difficulty, string> = {
   expert: 'Expert',
 };
 
-const difficultyDescriptions: Record<Difficulty, string> = {
-  easy: 'Cocok untuk memulai kebiasaan dengan target yang ringan dan konsisten.',
-  normal: 'Tantangan seimbang untuk rutinitas yang sudah mulai stabil.',
-  hard: 'Target lebih menantang untuk mendorong disiplin dan perkembangan lebih cepat.',
-  expert: 'Untuk petualang berpengalaman yang siap menghadapi target paling berat.',
-};
-
 function OnboardingScreen({
   token,
   step,
@@ -1179,6 +1172,7 @@ function OnboardingScreen({
     stamina_bonus: number;
     luck_bonus: number;
   }[]>([]);
+  const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1189,7 +1183,10 @@ function OnboardingScreen({
     let mounted = true;
     void (async () => {
       try {
-        if (step === 'class') {
+        if (step === 'difficulty') {
+          const result = await getDifficultyConfigs(token);
+          if (mounted) setDifficultyConfigs(result.data);
+        } else {
           const result = await getClasses(token);
           if (mounted) setClasses(result.data);
         }
@@ -1258,7 +1255,9 @@ function OnboardingScreen({
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base font-black text-[#f5f0e6]">{onboardingDifficultyLabels[difficulty]}</Text>
                   </View>
-                  <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">{difficultyDescriptions[difficulty]}</Text>
+                  <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">
+                    {difficultyConfigs.find((item) => item.difficulty === difficulty)?.description || 'Penjelasan difficulty belum tersedia.'}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -2969,7 +2968,7 @@ export default function App() {
                       {formatDifficulty(difficulty)}
                     </Text>
                     <Text className="mt-1 text-center text-[9px] leading-3 text-[#aaa49a]">
-                      {difficultyDescriptions[difficulty]}
+                      {difficultyConfigs.find((item) => item.difficulty === difficulty)?.description || 'Penjelasan belum tersedia.'}
                     </Text>
                   </Pressable>
                 ))}

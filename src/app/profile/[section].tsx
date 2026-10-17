@@ -4,11 +4,13 @@ import { Link, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   getCurrentUser,
+  getDifficultyConfigs,
   getInventory,
   getProgression,
   updateDifficulty,
   type AuthUser,
   type Difficulty,
+  type DifficultyConfig,
   type InventoryData,
   type Progression,
 } from '../../lib/authApi';
@@ -20,16 +22,10 @@ const difficultyLabels: Record<Difficulty, string> = {
   expert: 'Ahli',
 };
 
-const difficultyDescriptions: Record<Difficulty, string> = {
-  easy: 'Target ringan untuk membangun kebiasaan dengan konsisten.',
-  normal: 'Tantangan seimbang untuk rutinitas yang sudah stabil.',
-  hard: 'Target lebih menantang untuk mendorong disiplin.',
-  expert: 'Target paling berat untuk petualang berpengalaman.',
-};
-
 export default function ProfileDetailScreen() {
   const { section } = useLocalSearchParams<{ section?: string }>();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
   const [progression, setProgression] = useState<Progression | null>(null);
   const [inventory, setInventory] = useState<InventoryData | null>(null);
   const [message, setMessage] = useState('');
@@ -45,9 +41,13 @@ export default function ProfileDetailScreen() {
       }
       try {
         if (section === 'difficulty') {
-          const userResult = await getCurrentUser(token);
+          const [userResult, configResult] = await Promise.all([
+            getCurrentUser(token),
+            getDifficultyConfigs(token),
+          ]);
           if (isMounted) {
             setUser(userResult.user);
+            setDifficultyConfigs(configResult.data);
           }
         } else if (section === 'badges') {
           if (isMounted) setInventory(await getInventory(token));
@@ -109,7 +109,9 @@ export default function ProfileDetailScreen() {
               <View className="flex-row items-center justify-between">
                 <Text className="text-base font-black text-[#f5f0e6]">{difficultyLabels[difficulty]}</Text>
               </View>
-              <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">{difficultyDescriptions[difficulty]}</Text>
+              <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">
+                {difficultyConfigs.find((item) => item.difficulty === difficulty)?.description || 'Penjelasan difficulty belum tersedia.'}
+              </Text>
             </Pressable>
           ))}
         </View>

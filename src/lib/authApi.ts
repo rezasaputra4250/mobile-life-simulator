@@ -93,6 +93,7 @@ export type Difficulty = 'easy' | 'normal' | 'hard' | 'expert';
 export type DifficultyConfig = {
   difficulty: Difficulty;
   base_reward_xp: number;
+  description: string;
 };
 
 export type ExperienceTransaction = {
