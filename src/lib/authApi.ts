@@ -8,6 +8,7 @@ export type AuthUser = {
   email: string;
   affiliate_code?: string | null;
   referred_by?: number | null;
+  class_id?: number | null;
   difficulty?: Difficulty;
   level?: number;
   experience?: number;

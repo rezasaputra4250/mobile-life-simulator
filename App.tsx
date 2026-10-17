@@ -1151,7 +1151,7 @@ function getRequiredOnboardingStep(
   user: AuthUser | null | undefined,
   progressionResult: Progression | null | undefined,
 ): OnboardingStep | null {
-  const hasClass = Number(progressionResult?.character?.class_id || 0) > 0;
+  const hasClass = Number(user?.class_id || progressionResult?.character?.class_id || 0) > 0;
   if (hasClass) return null;
 
   // Difficulty has a backend default, so only ask for it when it is truly absent.
@@ -1633,10 +1633,17 @@ export default function App() {
     setAuthUser(session.user);
     setIsGuest(false);
     setAuthError('');
+    if (await hasCompletedOnboarding(session.user.id)) {
+      setOnboardingStep(null);
+      return;
+    }
     try {
       const progressionResult = await getProgression(session.token);
-      setOnboardingStep(getRequiredOnboardingStep(session.user, progressionResult.data));
+      const requiredStep = getRequiredOnboardingStep(session.user, progressionResult.data);
+      setOnboardingStep(requiredStep);
+      if (!requiredStep) await markOnboardingCompleted(session.user.id);
     } catch {
+      // Keep the existing session flow if onboarding status cannot be checked.
       setOnboardingStep(null);
     }
   }
