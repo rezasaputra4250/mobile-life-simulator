@@ -22,8 +22,6 @@ import {
   faHouse,
   faKey,
   faLock,
-  faLocationDot,
-  faMap,
   faMedal,
   faPlus,
   faPhone,
@@ -734,8 +732,6 @@ function AuthScreen({
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [phone, setPhone] = useState('');
-  const [city, setCity] = useState('');
-  const [province, setProvince] = useState('');
   const [email, setEmail] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [password, setPassword] = useState('');
@@ -764,10 +760,6 @@ function AuthScreen({
     }
     if (screen === 'register' && !phone.trim()) {
       setFormError('Nomor telepon wajib diisi.');
-      return;
-    }
-    if (screen === 'register' && (!city.trim() || !province.trim())) {
-      setFormError('Kota dan provinsi wajib diisi.');
       return;
     }
     if ((screen === 'register' || screen === 'reset') && password.length < 8) {
@@ -822,8 +814,6 @@ function AuthScreen({
               birth_date: birthDate.trim(),
               gender: gender || undefined,
               phone: phone.trim(),
-              city: city.trim(),
-              province: province.trim(),
             })
           : await login(normalizedEmail, password);
       if (screen === 'register') {
@@ -833,8 +823,6 @@ function AuthScreen({
         setBirthDate('');
         setGender('');
         setPhone('');
-        setCity('');
-        setProvince('');
         setNotice('Akun berhasil dibuat. Silakan login untuk memilih difficulty dan class.');
         return;
       }
@@ -1007,20 +995,6 @@ function AuthScreen({
                   value: phone,
                   onChangeText: setPhone,
                   keyboardType: 'phone-pad',
-                })}
-                {renderInput({
-                  icon: faLocationDot,
-                  placeholder: 'Kota',
-                  value: city,
-                  onChangeText: setCity,
-                  autoCapitalize: 'words',
-                })}
-                {renderInput({
-                  icon: faMap,
-                  placeholder: 'Provinsi',
-                  value: province,
-                  onChangeText: setProvince,
-                  autoCapitalize: 'words',
                 })}
               </>
             )}

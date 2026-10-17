@@ -303,8 +303,6 @@ export type RegistrationProfile = {
   gender?: 'male' | 'female' | 'other';
   phone?: string;
   address?: string;
-  city?: string;
-  province?: string;
 };
 
 export function register(name: string, email: string, password: string, referralCode?: string, profile?: RegistrationProfile) {
