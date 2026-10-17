@@ -1396,6 +1396,7 @@ export default function App() {
   const [isDifficultySaving, setIsDifficultySaving] = useState(false);
   const [missionError, setMissionError] = useState('');
   const [isMissionLoading, setIsMissionLoading] = useState(false);
+  const [hasLoadedMissions, setHasLoadedMissions] = useState(false);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [unlockedSkill, setUnlockedSkill] = useState<MissionReward | null>(null);
   const [missionFrequency, setMissionFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -1556,6 +1557,7 @@ export default function App() {
     let isMounted = true;
 
     async function loadMissions() {
+      setHasLoadedMissions(false);
       setIsMissionLoading(true);
       try {
         const result = await getMissions(token);
@@ -1569,7 +1571,10 @@ export default function App() {
           setMissionError(error instanceof Error ? error.message : 'Misi belum dapat dimuat.');
         }
       } finally {
-        if (isMounted) setIsMissionLoading(false);
+        if (isMounted) {
+          setIsMissionLoading(false);
+          setHasLoadedMissions(true);
+        }
       }
     }
 
@@ -1588,7 +1593,6 @@ export default function App() {
     ]).then(([profileResult, progressionResult]) => {
       if (!isMounted) return;
       setAuthUser(profileResult.user);
-      setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
       setProgression(progressionResult.data);
     }).catch(() => {
       // The existing dashboard data remains visible if a focus refresh fails.
@@ -2460,7 +2464,7 @@ export default function App() {
                 </Pressable>
               ))}
             </View>
-            {isMissionLoading ? (
+            {authSession && isMissionLoading && !hasLoadedMissions ? (
               <Text className="py-4 text-center text-sm text-[#85838a]">Memuat data misi...</Text>
             ) : visibleMissions.length ? (
               <View className="gap-3">
