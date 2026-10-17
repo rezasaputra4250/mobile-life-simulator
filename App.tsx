@@ -730,7 +730,7 @@ function AuthScreen({
   initialError,
 }: {
   onContinueAsGuest: () => void;
-  onAuthenticated: (session: AuthSession) => Promise<void>;
+  onAuthenticated: (session: AuthSession, rememberMe?: boolean) => Promise<void>;
   initialError?: string;
 }) {
   const [screen, setScreen] = useState<AuthScreenName>('login');
@@ -744,6 +744,7 @@ function AuthScreen({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetToken, setResetToken] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   async function submitForm() {
     const normalizedEmail = email.trim().toLowerCase();
@@ -806,7 +807,7 @@ function AuthScreen({
         screen === 'register'
           ? await register(name.trim(), normalizedEmail, password, referralCode.trim() || undefined)
           : await login(normalizedEmail, password);
-      await onAuthenticated(session);
+      await onAuthenticated(session, screen === 'login' ? rememberMe : true);
     } catch (error) {
       setFormError(
         error instanceof Error
@@ -1010,7 +1011,23 @@ function AuthScreen({
 
             {screen === 'login' && (
               <View className="mb-5 flex-row items-center justify-between">
-                <Text className="text-xs font-semibold text-[#8cbf9a]">Sesi tersimpan otomatis</Text>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: rememberMe }}
+                  accessibilityLabel="Ingat saya di perangkat ini"
+                  onPress={() => setRememberMe((current) => !current)}
+                  className="flex-row items-center"
+                  hitSlop={8}
+                >
+                  <View
+                    className={`mr-2 h-5 w-5 items-center justify-center rounded-md border ${
+                      rememberMe ? 'border-[#e7bd68] bg-[#e7bd68]' : 'border-[#5a5b64] bg-transparent'
+                    }`}
+                  >
+                    {rememberMe ? <FontAwesomeIcon icon={faCheck} size={12} color="#211b10" /> : null}
+                  </View>
+                  <Text className="text-xs font-semibold text-[#c5beb0]">Ingat saya</Text>
+                </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => {
@@ -1412,11 +1429,17 @@ export default function App() {
     };
   }, [authSession]);
 
-  async function handleAuthenticated(session: AuthSession) {
-    if (Platform.OS === 'web') {
-      window.localStorage.setItem('auth_token', session.token);
+  async function handleAuthenticated(session: AuthSession, rememberMe = true) {
+    if (rememberMe) {
+      if (Platform.OS === 'web') {
+        window.localStorage.setItem('auth_token', session.token);
+      } else {
+        await SecureStore.setItemAsync('auth_token', session.token);
+      }
+    } else if (Platform.OS === 'web') {
+      window.localStorage.removeItem('auth_token');
     } else {
-      await SecureStore.setItemAsync('auth_token', session.token);
+      await SecureStore.deleteItemAsync('auth_token');
     }
     setAuthSession(session);
     setAuthUser(session.user);
