@@ -80,6 +80,7 @@ import {
   updateDifficulty,
   type AuthSession,
   type AuthUser,
+  type AuthSkill,
   type FriendRequest,
   type FriendRelationshipStatus,
   type InventoryData,
@@ -95,6 +96,8 @@ import {
   type DifficultyConfig,
   type ExperienceTransaction,
 } from './src/lib/authApi';
+import { HomeMenuCard } from './src/components/HomeMenuCard';
+import { RadarCard, type RadarAxis } from './src/components/RadarChart';
 import './global.css';
 
 const initialMissions: Mission[] = [
@@ -149,10 +152,37 @@ const navigationItems: { label: string; icon: IconProp }[] = [
   { label: 'Beranda', icon: faHouse },
   { label: 'Misi', icon: faFlag },
   { label: 'Jurnal', icon: faBookOpen },
-  { label: 'Inventori', icon: faScroll },
+  { label: 'Inventaris', icon: faScroll },
   { label: 'Guild', icon: faUsers },
   { label: 'Profil', icon: faUser },
 ];
+
+function getSkillRadarAxes(skills: AuthSkill[] | undefined): RadarAxis[] {
+  return (skills || [])
+    .slice()
+    .sort((left, right) => left.label.localeCompare(right.label))
+    .slice(0, 6)
+    .map((skill) => {
+      const nextLevelExperience = Math.max(1, skill.experience_to_next_level || 1);
+      const progress = Math.min(1, Math.max(0, skill.experience / nextLevelExperience));
+      const value = Math.max(0, skill.level + progress);
+      return {
+        label: skill.label,
+        value,
+        displayValue: `Lv. ${skill.level}`,
+      };
+    });
+}
+
+function getStatRadarAxes(stats: AuthUser['stats'] | undefined): RadarAxis[] {
+  return [
+    { label: 'Kekuatan', value: stats?.strength ?? 0 },
+    { label: 'Intelligence', value: stats?.intelligence ?? 0 },
+    { label: 'Agility', value: stats?.agility ?? 0 },
+    { label: 'Stamina', value: stats?.stamina ?? 0 },
+    { label: 'Keberuntungan', value: stats?.luck ?? 0 },
+  ];
+}
 
 function getLocalDateValue() {
   const now = new Date();
@@ -1154,6 +1184,8 @@ export default function App() {
   const activeDifficulty = authUser?.difficulty ?? 'easy';
   const activeDifficultyConfig = difficultyConfigs.find((item) => item.difficulty === activeDifficulty);
   const userProfile = authUser?.profile;
+  const skillRadarAxes = getSkillRadarAxes(authUser?.skills);
+  const statRadarAxes = getStatRadarAxes(authUser?.stats);
   const categoryMissions = missions.filter((mission) => missionCategory === 'all' || (mission.category || 'system') === missionCategory);
   const frequencyMissions = categoryMissions.filter((mission) => (mission.frequency || 'daily') === missionFrequency);
   const visibleMissions = frequencyMissions.filter((mission) => {
@@ -1361,7 +1393,7 @@ export default function App() {
       } catch (error) {
         if (isMounted) {
           setInventoryError(
-            error instanceof Error ? error.message : 'Inventori belum dapat dimuat.',
+            error instanceof Error ? error.message : 'Inventaris belum dapat dimuat.',
           );
         }
       } finally {
@@ -1890,23 +1922,6 @@ export default function App() {
           </View>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setActiveTab('Guild')}
-          className="mb-5 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4"
-        >
-          <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
-            <FontAwesomeIcon icon={faUsers} size={18} color="#e7bd68" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-sm font-extrabold text-[#f5f0e6]">Guild</Text>
-            <Text className="mt-1 text-xs text-[#aaa49a]">
-              Buat guild dan ajak temanmu berpetualang.
-            </Text>
-          </View>
-          <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
-        </Pressable>
-
         <Link href="/classes" asChild>
           <Pressable className="mb-5 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
             <View className="mr-3 h-11 w-11 items-center justify-center rounded-xl bg-[#3a3020]">
@@ -1948,6 +1963,58 @@ export default function App() {
             </Text>
             <Text className="mt-1 text-xl font-extrabold text-[#f5f0e6]">+{totalMissionXp}</Text>
           </View>
+        </View>
+
+        <View className="mb-6">
+          <Text className="mb-3 text-xl font-extrabold text-[#f5f0e6]">Menu petualangan</Text>
+          <View className="flex-row gap-3">
+            <HomeMenuCard
+              icon={faFlag}
+              label="Misi"
+              summary={`${completedMissions}/${missions.length} selesai`}
+              accessibilityLabel="Buka menu Misi"
+              onPress={() => setActiveTab('Misi')}
+            />
+            <HomeMenuCard
+              icon={faBookOpen}
+              label="Jurnal"
+              summary={`${completedMissions} aktivitas selesai`}
+              accessibilityLabel="Buka menu Jurnal"
+              onPress={() => setActiveTab('Jurnal')}
+            />
+          </View>
+          <View className="mt-3 flex-row gap-3">
+            <HomeMenuCard
+              icon={faUsers}
+              label="Guild"
+              summary={`${guilds.length} guild diikuti`}
+              accessibilityLabel="Buka menu Guild"
+              onPress={() => setActiveTab('Guild')}
+            />
+            <HomeMenuCard
+              icon={faScroll}
+              label="Inventaris"
+              summary={`${inventory.totals.items} item · ${inventory.totals.badges} badge`}
+              accessibilityLabel="Buka menu Inventaris"
+              onPress={() => setActiveTab('Inventaris')}
+            />
+          </View>
+        </View>
+
+        <View className="mb-7 gap-3">
+          <RadarCard
+            title="Skill"
+            description="Kekuatan skill yang telah terbuka."
+            axes={skillRadarAxes}
+            emptyMessage="Selesaikan misi ber-reward skill untuk membuka data radar."
+            accent="#8cbf9a"
+          />
+          <RadarCard
+            title="Statistik"
+            description="Atribut utama karakter petualangmu."
+            axes={statRadarAxes}
+            accent="#e7bd68"
+          />
         </View>
 
         <View className="mb-4 flex-row items-center justify-between">
@@ -2138,10 +2205,10 @@ export default function App() {
               </View>
             </View>
           </>
-        ) : activeTab === 'Inventori' ? (
+        ) : activeTab === 'Inventaris' ? (
           <>
             <View className="mb-6">
-              <Text className="text-2xl font-black text-[#f5f0e6]">Inventori Petualang</Text>
+              <Text className="text-2xl font-black text-[#f5f0e6]">Inventaris Petualang</Text>
               <Text className="mt-2 text-sm leading-5 text-[#929097]">
                 Simpan item dan badge yang kamu dapatkan dari quest guild.
               </Text>
