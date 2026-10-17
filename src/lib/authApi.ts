@@ -347,6 +347,13 @@ export type Progression = {
     level: number;
     experience: number;
     experience_to_next_level: number;
+    health_points: number;
+    mana_points: number;
+    strength: number;
+    intelligence: number;
+    agility: number;
+    stamina: number;
+    luck: number;
   }) | null;
   skills: AuthSkill[];
 };

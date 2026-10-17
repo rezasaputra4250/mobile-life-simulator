@@ -118,11 +118,11 @@ export default function ProfileDetailScreen() {
       ) : section === 'stats' ? (
         <View className="mt-6 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
           {[
-            ['Kekuatan', user?.stats?.strength ?? 0],
-            ['Intelligence', user?.stats?.intelligence ?? 0],
-            ['Agility', user?.stats?.agility ?? 0],
-            ['Stamina', user?.stats?.stamina ?? 0],
-            ['Keberuntungan', user?.stats?.luck ?? 0],
+            ['Kekuatan', progression?.character?.strength ?? 0],
+            ['Intelligence', progression?.character?.intelligence ?? 0],
+            ['Agility', progression?.character?.agility ?? 0],
+            ['Stamina', progression?.character?.stamina ?? 0],
+            ['Keberuntungan', progression?.character?.luck ?? 0],
           ].map(([label, value]) => (
             <View key={String(label)} className="mb-4 last:mb-0">
               <View className="mb-2 flex-row items-center justify-between">
