@@ -1131,6 +1131,17 @@ function AuthScreen({
 
 type OnboardingStep = 'difficulty' | 'class';
 
+function getRequiredOnboardingStep(
+  user: AuthUser | null | undefined,
+  progressionResult: Progression | null | undefined,
+): OnboardingStep | null {
+  const hasClass = Number(progressionResult?.character?.class_id || 0) > 0;
+  if (hasClass) return null;
+
+  // Difficulty has a backend default, so only ask for it when it is truly absent.
+  return user?.difficulty ? 'class' : 'difficulty';
+}
+
 const onboardingDifficultyLabels: Record<Difficulty, string> = {
   easy: 'Easy',
   normal: 'Normal',
@@ -1402,7 +1413,7 @@ export default function App() {
           }
           try {
             const progressionResult = await getProgression(token);
-            if (isMounted && !progressionResult.data.character?.class_id) setOnboardingStep('difficulty');
+            if (isMounted) setOnboardingStep(getRequiredOnboardingStep(result.user, progressionResult.data));
           } catch {
             // Keep the existing session flow if onboarding status cannot be checked.
           }
@@ -1609,7 +1620,7 @@ export default function App() {
     setAuthError('');
     try {
       const progressionResult = await getProgression(session.token);
-      setOnboardingStep(progressionResult.data.character?.class_id ? null : 'difficulty');
+      setOnboardingStep(getRequiredOnboardingStep(session.user, progressionResult.data));
     } catch {
       setOnboardingStep(null);
     }
