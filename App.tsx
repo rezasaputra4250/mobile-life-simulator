@@ -1590,10 +1590,14 @@ export default function App() {
     void Promise.all([
       getCurrentUser(authSession.token),
       getProgression(authSession.token),
-    ]).then(([profileResult, progressionResult]) => {
+      getMissions(authSession.token),
+    ]).then(([profileResult, progressionResult, missionsResult]) => {
       if (!isMounted) return;
       setAuthUser(profileResult.user);
       setProgression(progressionResult.data);
+      setMissions(missionsResult.missions);
+      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      setMissionError('');
     }).catch(() => {
       // The existing dashboard data remains visible if a focus refresh fails.
     });
