@@ -54,6 +54,7 @@ import {
   getInventory,
   getDifficultyConfigs,
   getExperienceHistory,
+  getProgression,
   getAffiliateProfile,
   getTodos,
   createTodo,
@@ -95,6 +96,7 @@ import {
   type Difficulty,
   type DifficultyConfig,
   type ExperienceTransaction,
+  type Progression,
 } from './src/lib/authApi';
 import { HomeMenuCard } from './src/components/HomeMenuCard';
 import { RadarCard, type RadarAxis } from './src/components/RadarChart';
@@ -1120,6 +1122,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
   const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
+  const [progression, setProgression] = useState<Progression | null>(null);
   const [experienceHistory, setExperienceHistory] = useState<ExperienceTransaction[]>([]);
   const [difficultyError, setDifficultyError] = useState('');
   const [isDifficultySaving, setIsDifficultySaving] = useState(false);
@@ -1289,13 +1292,15 @@ export default function App() {
 
     async function loadRpgCore() {
       try {
-        const [difficultyResult, historyResult] = await Promise.all([
+        const [difficultyResult, historyResult, progressionResult] = await Promise.all([
           getDifficultyConfigs(token),
           getExperienceHistory(token),
+          getProgression(token),
         ]);
         if (isMounted) {
           setDifficultyConfigs(difficultyResult.data);
           setExperienceHistory(historyResult.data);
+          setProgression(progressionResult.data);
           setDifficultyError('');
         }
       } catch (error) {
@@ -1448,6 +1453,7 @@ export default function App() {
     setAuthSession(null);
     setAuthUser(null);
     setInventory({ items: [], badges: [], totals: { items: 0, badges: 0 } });
+    setProgression(null);
     setAffiliateProfile(null);
     setTodos([]);
     setTodoTitle('');
@@ -1776,17 +1782,19 @@ export default function App() {
       if (result.reward?.type === 'skill') setUnlockedSkill(result.reward);
       if (authSession) {
         try {
-          const [profileResult, inventoryResult, missionsResult, historyResult] = await Promise.all([
+          const [profileResult, inventoryResult, missionsResult, historyResult, progressionResult] = await Promise.all([
             getCurrentUser(authSession.token),
             getInventory(authSession.token),
             getMissions(authSession.token),
             getExperienceHistory(authSession.token),
+            getProgression(authSession.token),
           ]);
           setAuthUser(profileResult.user);
           setInventory(inventoryResult);
           setMissions(missionsResult.missions);
           setStreakDays(missionsResult.stats?.streak_days ?? 0);
           setExperienceHistory(historyResult.data);
+          setProgression(progressionResult.data);
         } catch (error) {
           setMissionError(
             error instanceof Error ? error.message : 'Data karakter belum dapat diperbarui.',
@@ -1815,17 +1823,19 @@ export default function App() {
         ),
       );
       setSelectedMission(null);
-      const [profileResult, inventoryResult, missionsResult, historyResult] = await Promise.all([
+      const [profileResult, inventoryResult, missionsResult, historyResult, progressionResult] = await Promise.all([
         getCurrentUser(authSession.token),
         getInventory(authSession.token),
         getMissions(authSession.token),
         getExperienceHistory(authSession.token),
+        getProgression(authSession.token),
       ]);
       setAuthUser(profileResult.user);
       setInventory(inventoryResult);
       setMissions(missionsResult.missions);
       setStreakDays(missionsResult.stats?.streak_days ?? 0);
       setExperienceHistory(historyResult.data);
+      setProgression(progressionResult.data);
       setMissionError('');
     } catch (error) {
       setMissionError(error instanceof Error ? error.message : 'Pembatalan misi gagal.');
@@ -2667,6 +2677,31 @@ export default function App() {
                 </View>
               </View>
             </View>
+
+            <Link href="/classes" asChild>
+              <Pressable
+                accessibilityRole="button"
+                className="mb-5 rounded-2xl border border-[#5a482a] bg-[#242118] p-4"
+              >
+                <View className="flex-row items-center">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#3a3020]">
+                    <FontAwesomeIcon icon={faShieldHalved} size={17} color="#e7bd68" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Class karakter</Text>
+                    <Text className="mt-1 text-base font-black text-[#f5f0e6]">
+                      {progression?.character?.class_label || 'Belum memilih class'}
+                    </Text>
+                    <Text className="mt-1 text-xs text-[#aaa49a]">
+                      {progression?.character?.primary_stat
+                        ? `Stat utama: ${progression.character.primary_stat}`
+                        : 'Pilih class untuk menentukan arah perkembangan.'}
+                    </Text>
+                  </View>
+                  <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
+                </View>
+              </Pressable>
+            </Link>
 
             <View className="mb-5 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
               <View className="flex-row items-center">
