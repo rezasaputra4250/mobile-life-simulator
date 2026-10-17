@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Link } from 'expo-router';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createCustomMission } from '../lib/authApi';
 
 export default function MissionCreateScreen() {
@@ -28,7 +29,7 @@ export default function MissionCreateScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#17181d] px-5 pt-16">
+    <SafeAreaView className="flex-1 bg-[#17181d] px-5 pt-8" edges={['top', 'left', 'right', 'bottom']}>
       <Link href="/" asChild><Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali</Text></Pressable></Link>
       <Text className="text-3xl font-black text-[#f5f0e6]">Misi baru</Text>
       <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Ubah pekerjaan nyata menjadi progress karakter.</Text>
@@ -43,7 +44,7 @@ export default function MissionCreateScreen() {
       </View>
       <Pressable onPress={() => void submit()} className="mt-4 items-center rounded-xl bg-[#e7bd68] px-4 py-3"><Text className="font-black text-[#211c12]">Buat misi</Text></Pressable>
       {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
-    </View>
+    </SafeAreaView>
   );
 }
 

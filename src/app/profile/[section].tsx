@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getCurrentUser,
   getDifficultyConfigs,
@@ -88,7 +89,8 @@ export default function ProfileDetailScreen() {
         : 'Kemampuan player';
 
   return (
-    <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView className="flex-1 bg-[#17181d]" edges={['top', 'left', 'right', 'bottom']}>
+      <ScrollView className="flex-1 px-5 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
       <ProfilePageHeader
         title={title}
         subtitle={section === 'difficulty' ? 'Atur tingkat tantangan untuk misi baru.' : 'Lihat ringkasan perkembangan karaktermu.'}
@@ -166,6 +168,7 @@ export default function ProfileDetailScreen() {
           )) : <Text className="text-sm text-[#85838a]">Belum ada kemampuan yang terbuka.</Text>}
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateProfile } from '../lib/authApi';
 
 export default function ProfileEditScreen() {
@@ -63,7 +64,8 @@ export default function ProfileEditScreen() {
   ];
 
   return (
-    <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView className="flex-1 bg-[#17181d]" edges={['top', 'left', 'right', 'bottom']}>
+      <ScrollView className="flex-1 px-5 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
       <ProfilePageHeader title="Edit profil" subtitle="Perbarui informasi dasar akun dan profilmu." />
       {fields.map(({ label, value, onChange }) => (
         <View key={String(label)} className="mt-4">
@@ -77,6 +79,7 @@ export default function ProfileEditScreen() {
         <Text className="font-black text-[#211c12]">{isSaving ? 'Menyimpan...' : 'Simpan perubahan'}</Text>
       </Pressable>
       {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

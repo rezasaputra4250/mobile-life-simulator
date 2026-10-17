@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getClasses, getProgression, selectClass, type PlayerClass } from '../lib/authApi';
 
 export default function ClassesScreen() {
@@ -38,7 +39,8 @@ export default function ClassesScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16">
+    <SafeAreaView className="flex-1 bg-[#17181d]" edges={['top', 'left', 'right', 'bottom']}>
+      <ScrollView className="flex-1 px-5 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
       <ProfilePageHeader title="Pekerjaan karakter" subtitle="Pilih peran yang paling menggambarkan kondisimu saat ini." />
       {currentClassLabel ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">Class saat ini: {currentClassLabel}</Text> : null}
       {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
@@ -53,6 +55,7 @@ export default function ClassesScreen() {
           {currentClassId === item.id ? <Text className="mt-3 text-[10px] font-black uppercase tracking-[1px] text-[#e7bd68]">Class aktif</Text> : null}
         </Pressable>
       ))}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

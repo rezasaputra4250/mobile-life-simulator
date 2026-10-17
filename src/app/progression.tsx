@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getExperienceHistory,
   getProgression,
@@ -66,7 +67,8 @@ export default function ProgressionScreen() {
     : null;
 
   return (
-    <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView className="flex-1 bg-[#17181d]" edges={['top', 'left', 'right', 'bottom']}>
+      <ScrollView className="flex-1 px-5 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
       <ProfilePageHeader title="Progression & EXP" subtitle="Pantau level, pekerjaan, kemampuan, dan perjalanan EXP karaktermu." />
       {message ? <Text className="mt-4 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
 
@@ -116,6 +118,7 @@ export default function ProgressionScreen() {
           ))}
         </>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

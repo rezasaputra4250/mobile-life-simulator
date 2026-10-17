@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { changePassword } from '../lib/authApi';
 
 export default function ChangePasswordScreen() {
@@ -30,7 +31,8 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView className="flex-1 bg-[#17181d]" edges={['top', 'left', 'right', 'bottom']}>
+      <ScrollView className="flex-1 px-5 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
       <ProfilePageHeader title="Ganti password" subtitle="Perbarui keamanan akunmu dengan password baru." />
       <View className="rounded-2xl border border-[#34353d] bg-[#1b1c22] p-4">
         <Text className="text-xs leading-5 text-[#aaa49a]">Gunakan minimal 8 karakter dan jangan gunakan password yang sama di tempat lain.</Text>
@@ -42,6 +44,7 @@ export default function ChangePasswordScreen() {
         <Text className="font-black text-[#211c12]">{isSaving ? 'Menyimpan...' : 'Simpan password'}</Text>
       </Pressable>
       {message ? <Text className="mt-4 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
