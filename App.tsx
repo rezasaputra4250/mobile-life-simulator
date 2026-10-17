@@ -47,6 +47,7 @@ import {
   ApiError,
   forgotPassword,
   getCurrentUser,
+  getClasses,
   getGuilds,
   createGuildMission,
   contributeGuildMission,
@@ -65,6 +66,7 @@ import {
   createCustomMission,
   login,
   register,
+  selectClass,
   respondFriendRequest,
   removeFriend,
   resetPassword,
@@ -807,6 +809,13 @@ function AuthScreen({
         screen === 'register'
           ? await register(name.trim(), normalizedEmail, password, referralCode.trim() || undefined)
           : await login(normalizedEmail, password);
+      if (screen === 'register') {
+        setScreen('login');
+        setPassword('');
+        setConfirmPassword('');
+        setNotice('Akun berhasil dibuat. Silakan login untuk memilih difficulty dan class.');
+        return;
+      }
       await onAuthenticated(session, screen === 'login' ? rememberMe : true);
     } catch (error) {
       setFormError(
@@ -1130,6 +1139,160 @@ function AuthScreen({
   );
 }
 
+type OnboardingStep = 'difficulty' | 'class';
+
+const onboardingDifficultyLabels: Record<Difficulty, string> = {
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+  expert: 'Expert',
+};
+
+function OnboardingScreen({
+  token,
+  step,
+  onDifficultySelected,
+  onCompleted,
+  onBackToLogin,
+}: {
+  token: string;
+  step: OnboardingStep;
+  onDifficultySelected: (difficulty: Difficulty) => Promise<void>;
+  onCompleted: () => Promise<void>;
+  onBackToLogin: () => Promise<void>;
+}) {
+  const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
+  const [classes, setClasses] = useState<{
+    id: number;
+    label: string;
+    description: string | null;
+    primary_stat: string;
+    strength_bonus: number;
+    intelligence_bonus: number;
+    agility_bonus: number;
+    stamina_bonus: number;
+    luck_bonus: number;
+  }[]>([]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null);
+  const [selectedClass, setSelectedClass] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      try {
+        if (step === 'difficulty') {
+          const result = await getDifficultyConfigs(token);
+          if (mounted) setDifficultyConfigs(result.data);
+        } else {
+          const result = await getClasses(token);
+          if (mounted) setClasses(result.data);
+        }
+      } catch (loadError) {
+        if (mounted) setError(loadError instanceof Error ? loadError.message : 'Data onboarding belum dapat dimuat.');
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [step, token]);
+
+  async function continueOnboarding() {
+    const value = step === 'difficulty' ? selectedDifficulty : selectedClass;
+    if (!value) {
+      setError(step === 'difficulty' ? 'Pilih difficulty terlebih dahulu.' : 'Pilih class terlebih dahulu.');
+      return;
+    }
+    setIsSaving(true);
+    setError('');
+    try {
+      if (step === 'difficulty') {
+        await onDifficultySelected(value as Difficulty);
+      } else {
+        await selectClass(token, value as number);
+        await onCompleted();
+      }
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Pilihan belum dapat disimpan.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#101116]" edges={['top', 'left', 'right', 'bottom']}>
+      <StatusBar style="light" />
+      <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 26 }}>
+        <View className="mb-8 items-center">
+          <View className="mb-5 h-[72px] w-[72px] items-center justify-center rounded-[24px] border border-[#66522c] bg-[#282317]">
+            <FontAwesomeIcon icon={step === 'difficulty' ? faCompass : faShieldHalved} size={31} color="#e7bd68" />
+          </View>
+          <Text className="mb-2 text-[11px] font-bold uppercase tracking-[2.5px] text-[#e7bd68]">PERSIAPAN PETUALANG</Text>
+          <Text className="text-center text-[27px] font-black text-[#fff8e9]">
+            {step === 'difficulty' ? 'Pilih tingkat tantangan' : 'Pilih class karakter'}
+          </Text>
+          <Text className="mt-2 text-center text-sm leading-5 text-[#99969c]">
+            {step === 'difficulty'
+              ? 'Difficulty menentukan reward untuk misi baru. Pilihan ini bisa diubah nanti dari Profil.'
+              : 'Class menentukan bonus awal dan arah perkembangan karakter.'}
+          </Text>
+        </View>
+
+        <View className="rounded-[26px] border border-[#34343a] bg-[#17181d] p-5">
+          {isLoading ? <Text className="py-8 text-center text-sm text-[#85838a]">Menyiapkan pilihan...</Text> : null}
+          {!isLoading && step === 'difficulty' ? (
+            <View className="gap-3">
+              {(['easy', 'normal', 'hard', 'expert'] as Difficulty[]).map((difficulty) => (
+                <Pressable
+                  key={difficulty}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedDifficulty === difficulty }}
+                  onPress={() => setSelectedDifficulty(difficulty)}
+                  className={`rounded-2xl border p-4 ${selectedDifficulty === difficulty ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#2d2e35] bg-[#1b1c22]'}`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-base font-black text-[#f5f0e6]">{onboardingDifficultyLabels[difficulty]}</Text>
+                    <Text className="text-sm font-black text-[#e7bd68]">+{difficultyConfigs.find((item) => item.difficulty === difficulty)?.base_reward_xp ?? '—'} XP</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          {!isLoading && step === 'class' ? (
+            <View className="gap-3">
+              {classes.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedClass === item.id }}
+                  onPress={() => setSelectedClass(item.id)}
+                  className={`rounded-2xl border p-4 ${selectedClass === item.id ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#2d2e35] bg-[#1b1c22]'}`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-base font-black text-[#f5f0e6]">{item.label}</Text>
+                    <Text className="text-xs font-bold uppercase text-[#e7bd68]">{item.primary_stat}</Text>
+                  </View>
+                  <Text className="mt-2 text-sm leading-5 text-[#aaa49a]">{item.description}</Text>
+                  <Text className="mt-3 text-[10px] font-bold text-[#8cbf9a]">STR +{item.strength_bonus} · INT +{item.intelligence_bonus} · AGI +{item.agility_bonus} · STA +{item.stamina_bonus} · LCK +{item.luck_bonus}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          {error ? <Text className="mt-4 text-xs leading-5 text-[#f1a39a]">{error}</Text> : null}
+          <Pressable onPress={() => void continueOnboarding()} disabled={isSaving || isLoading} className="mt-5 h-14 items-center justify-center rounded-2xl bg-[#d8ad59]">
+            <Text className="text-sm font-black text-[#211b10]">{isSaving ? 'Menyimpan...' : step === 'difficulty' ? 'Lanjut pilih class' : 'Masuk ke beranda'}</Text>
+          </Pressable>
+        </View>
+        <Pressable accessibilityRole="button" onPress={() => void onBackToLogin()} className="mt-6 items-center py-3">
+          <Text className="text-xs font-bold text-[#c5beb0]">Kembali ke login</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 export default function App() {
   const [missions, setMissions] = useState(initialMissions);
   const [streakDays, setStreakDays] = useState(0);
@@ -1137,6 +1300,7 @@ export default function App() {
   const [isGuest, setIsGuest] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
   const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
@@ -1243,6 +1407,12 @@ export default function App() {
           if (isMounted) {
             setAuthSession({ token, user: result.user, message: result.message });
             setAuthUser(result.user);
+          }
+          try {
+            const progressionResult = await getProgression(token);
+            if (isMounted && !progressionResult.data.character?.class_id) setOnboardingStep('difficulty');
+          } catch {
+            // Keep the existing session flow if onboarding status cannot be checked.
           }
         } catch (error) {
           if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -1445,6 +1615,29 @@ export default function App() {
     setAuthUser(session.user);
     setIsGuest(false);
     setAuthError('');
+    try {
+      const progressionResult = await getProgression(session.token);
+      setOnboardingStep(progressionResult.data.character?.class_id ? null : 'difficulty');
+    } catch {
+      setOnboardingStep(null);
+    }
+  }
+
+  async function handleOnboardingDifficulty(difficulty: Difficulty) {
+    if (!authSession) return;
+    await updateDifficulty(authSession.token, difficulty);
+    const profileResult = await getCurrentUser(authSession.token);
+    setAuthUser(profileResult.user);
+    setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+    setOnboardingStep('class');
+  }
+
+  async function finishOnboarding() {
+    if (!authSession) return;
+    const profileResult = await getCurrentUser(authSession.token);
+    setAuthUser(profileResult.user);
+    setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+    setOnboardingStep(null);
   }
 
   async function handleDifficultyChange(difficulty: Difficulty) {
@@ -1476,6 +1669,7 @@ export default function App() {
     }
     setAuthSession(null);
     setAuthUser(null);
+    setOnboardingStep(null);
     setInventory({ items: [], badges: [], totals: { items: 0, badges: 0 } });
     setProgression(null);
     setAffiliateProfile(null);
@@ -1873,6 +2067,18 @@ export default function App() {
         <FontAwesomeIcon icon={faShieldHalved} size={30} color="#e7bd68" />
         <Text className="mt-4 text-sm font-semibold text-[#c5beb0]">Memeriksa sesi guild...</Text>
       </SafeAreaView>
+    );
+  }
+
+  if (authSession && onboardingStep) {
+    return (
+      <OnboardingScreen
+        token={authSession.token}
+        step={onboardingStep}
+        onDifficultySelected={handleOnboardingDifficulty}
+        onCompleted={finishOnboarding}
+        onBackToLogin={handleLogout}
+      />
     );
   }
 
