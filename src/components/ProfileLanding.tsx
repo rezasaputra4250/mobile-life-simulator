@@ -60,7 +60,7 @@ export function ProfileLanding({
         <ProfileOptionCard icon={faKey} label="Ganti password" description="Perbarui password akun dengan aman." />
       </Link>
       <Link href="/classes" asChild>
-        <ProfileOptionCard icon={faShieldHalved} label="Class" description="Pilih jalur perkembangan karakter." />
+        <ProfileOptionCard icon={faShieldHalved} label="Ganti class" description="Sesuaikan pekerjaan dan bonus karakter dengan kondisimu." />
       </Link>
       <Link href="/profile/difficulty" asChild>
         <ProfileOptionCard icon={faGaugeHigh} label="Difficulty" description="Atur tingkat tantangan mission baru." />

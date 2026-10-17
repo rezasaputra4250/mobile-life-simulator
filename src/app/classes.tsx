@@ -41,7 +41,7 @@ export default function ClassesScreen() {
     <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16">
       <Link href="/" asChild><Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali</Text></Pressable></Link>
       <Text className="text-3xl font-black text-[#f5f0e6]">Class karakter</Text>
-      <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Class menentukan bonus awal dan arah perkembangan karakter.</Text>
+      <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Class menggambarkan pekerjaan atau peranmu saat ini dan dapat diubah kapan saja.</Text>
       {currentClassLabel ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">Class saat ini: {currentClassLabel}</Text> : null}
       {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
       {classes.map((item) => (
