@@ -22,8 +22,11 @@ import {
   faHouse,
   faKey,
   faLock,
+  faLocationDot,
+  faMap,
   faMedal,
   faPlus,
+  faPhone,
   faScroll,
   faShieldHalved,
   faStar,
@@ -728,6 +731,11 @@ function AuthScreen({
   const [formError, setFormError] = useState(initialError ?? '');
   const [notice, setNotice] = useState('');
   const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
+  const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
   const [email, setEmail] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [password, setPassword] = useState('');
@@ -744,6 +752,22 @@ function AuthScreen({
 
     if (screen === 'register' && !name.trim()) {
       setFormError('Masukkan nama petualangmu terlebih dahulu.');
+      return;
+    }
+    if (screen === 'register' && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate.trim())) {
+      setFormError('Tanggal lahir gunakan format YYYY-MM-DD.');
+      return;
+    }
+    if (screen === 'register' && !gender) {
+      setFormError('Pilih jenis kelamin terlebih dahulu.');
+      return;
+    }
+    if (screen === 'register' && !phone.trim()) {
+      setFormError('Nomor telepon wajib diisi.');
+      return;
+    }
+    if (screen === 'register' && (!city.trim() || !province.trim())) {
+      setFormError('Kota dan provinsi wajib diisi.');
       return;
     }
     if ((screen === 'register' || screen === 'reset') && password.length < 8) {
@@ -794,12 +818,23 @@ function AuthScreen({
 
       const session =
         screen === 'register'
-          ? await register(name.trim(), normalizedEmail, password, referralCode.trim() || undefined)
+          ? await register(name.trim(), normalizedEmail, password, referralCode.trim() || undefined, {
+              birth_date: birthDate.trim(),
+              gender: gender || undefined,
+              phone: phone.trim(),
+              city: city.trim(),
+              province: province.trim(),
+            })
           : await login(normalizedEmail, password);
       if (screen === 'register') {
         setScreen('login');
         setPassword('');
         setConfirmPassword('');
+        setBirthDate('');
+        setGender('');
+        setPhone('');
+        setCity('');
+        setProvince('');
         setNotice('Akun berhasil dibuat. Silakan login untuk memilih difficulty dan class.');
         return;
       }
@@ -831,7 +866,7 @@ function AuthScreen({
     value: string;
     onChangeText: (value: string) => void;
     isPassword?: boolean;
-    keyboardType?: 'default' | 'email-address';
+    keyboardType?: 'default' | 'email-address' | 'phone-pad';
     autoCapitalize?: 'none' | 'words';
   }) {
     return (
@@ -938,6 +973,57 @@ function AuthScreen({
                 onChangeText: setName,
                 autoCapitalize: 'words',
               })}
+
+            {screen === 'register' && (
+              <>
+                {renderInput({
+                  icon: faCalendarCheck,
+                  placeholder: 'Tanggal lahir (YYYY-MM-DD)',
+                  value: birthDate,
+                  onChangeText: setBirthDate,
+                  keyboardType: 'default',
+                })}
+                <Text className="mb-2 mt-1 text-[10px] font-black uppercase tracking-[1px] text-[#9c927e]">Jenis kelamin</Text>
+                <View className="mb-3 flex-row gap-2">
+                  {([
+                    ['male', 'Laki-laki'],
+                    ['female', 'Perempuan'],
+                    ['other', 'Lainnya'],
+                  ] as const).map(([value, label]) => (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: gender === value }}
+                      onPress={() => setGender(value)}
+                      className={`flex-1 items-center rounded-xl border px-2 py-3 ${gender === value ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34343a] bg-[#121318]'}`}
+                    >
+                      <Text className="text-[10px] font-bold text-[#f5f0e6]">{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {renderInput({
+                  icon: faPhone,
+                  placeholder: 'Nomor telepon',
+                  value: phone,
+                  onChangeText: setPhone,
+                  keyboardType: 'phone-pad',
+                })}
+                {renderInput({
+                  icon: faLocationDot,
+                  placeholder: 'Kota',
+                  value: city,
+                  onChangeText: setCity,
+                  autoCapitalize: 'words',
+                })}
+                {renderInput({
+                  icon: faMap,
+                  placeholder: 'Provinsi',
+                  value: province,
+                  onChangeText: setProvince,
+                  autoCapitalize: 'words',
+                })}
+              </>
+            )}
 
             {screen === 'register' &&
               renderInput({
