@@ -71,7 +71,7 @@ export default function ProgressionScreen() {
         <Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali</Text></Pressable>
       </Link>
       <Text className="text-3xl font-black text-[#f5f0e6]">Progression</Text>
-      <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Pantau level, class, skill, dan perjalanan EXP karaktermu.</Text>
+      <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Pantau level, class, kemampuan, dan perjalanan EXP karaktermu.</Text>
       {message ? <Text className="mt-4 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
 
       {character ? (
@@ -92,7 +92,7 @@ export default function ProgressionScreen() {
             {character.primary_stat ? <Text className="mt-1 text-xs text-[#aaa49a]">Stat utama: {character.primary_stat}</Text> : null}
           </View>
 
-          <Text className="mb-3 mt-6 text-base font-extrabold text-[#f5f0e6]">Skill</Text>
+          <Text className="mb-3 mt-6 text-base font-extrabold text-[#f5f0e6]">Kemampuan</Text>
           {progression?.skills.length ? progression.skills.map((skill) => (
             <View key={skill.id} className="mb-3 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
               <View className="flex-row items-center justify-between">
@@ -104,7 +104,7 @@ export default function ProgressionScreen() {
                 <View className="h-full rounded-full bg-[#8cbf9a]" style={{ width: `${Math.min(100, (skill.experience / Math.max(1, skill.experience_to_next_level)) * 100)}%` }} />
               </View>
             </View>
-          )) : <Text className="text-sm text-[#85838a]">Belum ada skill yang terbuka.</Text>}
+          )) : <Text className="text-sm text-[#85838a]">Belum ada kemampuan yang terbuka.</Text>}
 
           <Text className="mb-3 mt-6 text-base font-extrabold text-[#f5f0e6]">Aktivitas EXP terbaru</Text>
           {history.slice(0, 10).map((transaction) => (

@@ -1,8 +1,8 @@
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faBookOpen, faChartSimple, faGaugeHigh, faMedal, faShieldHalved, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faBookOpen, faChartSimple, faGaugeHigh, faMedal, faShareNodes, faShieldHalved, faStar } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
-import type { AuthUser } from '../lib/authApi';
+import type { AffiliateProfile, AuthUser } from '../lib/authApi';
 import { ProfileOptionCard } from './ProfileOptionCard';
 
 type ProfileLandingProps = {
@@ -11,6 +11,8 @@ type ProfileLandingProps = {
   currentExperience: number;
   requiredExperience: number;
   progressPercentage: number;
+  affiliateProfile: AffiliateProfile | null;
+  onShareReferral: () => void;
   onLogout: () => void;
 };
 
@@ -20,6 +22,8 @@ export function ProfileLanding({
   currentExperience,
   requiredExperience,
   progressPercentage,
+  affiliateProfile,
+  onShareReferral,
   onLogout,
 }: ProfileLandingProps) {
   return (
@@ -56,7 +60,7 @@ export function ProfileLanding({
         <ProfileOptionCard icon={faGaugeHigh} label="Difficulty" description="Atur tingkat tantangan mission baru." />
       </Link>
       <Link href="/profile/skills" asChild>
-        <ProfileOptionCard icon={faStar} label="Skill" description="Lihat skill dan progres EXP skill." />
+        <ProfileOptionCard icon={faStar} label="Kemampuan" description="Lihat kemampuan dan progres EXP kemampuan." />
       </Link>
       <Link href="/profile/stats" asChild>
         <ProfileOptionCard icon={faChartSimple} label="Statistik" description="Lihat atribut utama karakter." />
@@ -67,6 +71,34 @@ export function ProfileLanding({
       <Link href="/progression" asChild>
         <ProfileOptionCard icon={faBookOpen} label="Progression & EXP" description="Lihat level dan riwayat EXP lengkap." />
       </Link>
+
+      <View className="mb-3 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+        <View className="flex-row items-center">
+          <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#3a3020]">
+            <FontAwesomeIcon icon={faShareNodes} size={17} color="#e7bd68" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-extrabold text-[#f5f0e6]">Bagikan referral</Text>
+            <Text className="mt-1 text-xs leading-5 text-[#aaa49a]">Ajak pengguna baru bergabung menggunakan kode referralmu.</Text>
+          </View>
+        </View>
+        <View className="mt-4 flex-row items-center rounded-xl border border-[#66522c] bg-[#342b1b] px-4 py-3">
+          <View className="flex-1">
+            <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Kode referral</Text>
+            <Text className="mt-1 text-lg font-black tracking-[2px] text-[#e7bd68]">{user?.affiliate_code || 'Belum tersedia'}</Text>
+            {affiliateProfile ? <Text className="mt-1 text-[10px] text-[#8cbf9a]">{affiliateProfile.referrals_count} referral terhubung</Text> : null}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Bagikan kode referral"
+            disabled={!user?.affiliate_code}
+            onPress={onShareReferral}
+            className={`rounded-xl px-4 py-2 ${user?.affiliate_code ? 'bg-[#e7bd68]' : 'bg-[#5a5141]'}`}
+          >
+            <Text className="text-xs font-black text-[#211b10]">Bagikan</Text>
+          </Pressable>
+        </View>
+      </View>
 
       {user ? (
         <Pressable

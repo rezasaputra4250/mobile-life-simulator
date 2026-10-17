@@ -84,7 +84,7 @@ export default function ProfileDetailScreen() {
       ? 'Statistik player'
       : section === 'badges'
         ? 'Badge player'
-        : 'Skill player';
+        : 'Kemampuan player';
 
   return (
     <ScrollView className="flex-1 bg-[#17181d] px-5 pt-16" contentContainerStyle={{ paddingBottom: 32 }}>
@@ -162,7 +162,7 @@ export default function ProfileDetailScreen() {
                 <View className="h-full rounded-full bg-[#8cbf9a]" style={{ width: `${Math.min(100, (skill.experience / Math.max(1, skill.experience_to_next_level)) * 100)}%` }} />
               </View>
             </View>
-          )) : <Text className="text-sm text-[#85838a]">Belum ada skill yang terbuka.</Text>}
+          )) : <Text className="text-sm text-[#85838a]">Belum ada kemampuan yang terbuka.</Text>}
         </View>
       )}
     </ScrollView>

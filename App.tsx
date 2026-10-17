@@ -298,7 +298,7 @@ function PickerField({
 
 function formatMissionReward(mission: Mission) {
   if (mission.reward.type === 'xp') return `+${mission.reward.amount} XP`;
-  if (mission.reward.type === 'skill') return `Skill: ${mission.reward.name}`;
+  if (mission.reward.type === 'skill') return `Kemampuan: ${mission.reward.name}`;
   if (mission.reward.type === 'item') return `Item: ${mission.reward.name}`;
   return `Badge: ${mission.reward.name}`;
 }
@@ -324,7 +324,7 @@ function formatMissionFrequency(value?: Mission['frequency']) {
 function formatMissionCategory(value?: Mission['category']) {
   if (value === 'personal') return 'Pribadi';
   if (value === 'guild') return 'Guild';
-  return 'Bawaan system';
+  return 'Sistem';
 }
 
 function formatTodoDueDate(value?: string | null) {
@@ -511,7 +511,7 @@ function SkillUnlockModal({
               <FontAwesomeIcon icon={faBolt} size={28} color="#e7bd68" />
             </View>
             <Text className="mt-4 text-[10px] font-bold uppercase tracking-[2px] text-[#e7bd68]">
-              Skill baru aktif
+              Kemampuan baru aktif
             </Text>
             <Text className="mt-2 text-center text-2xl font-black text-[#fff8e9]">
               {reward.name}
@@ -520,10 +520,10 @@ function SkillUnlockModal({
 
           <View className="mb-5 rounded-2xl border border-[#5d4a29] bg-[#342b1b] p-4">
             <Text className="text-center text-sm leading-5 text-[#c5beb0]">
-              {reward.description || 'Kemampuan baru telah ditambahkan ke daftar skill aktifmu.'}
+              {reward.description || 'Kemampuan baru telah ditambahkan ke daftar kemampuan aktifmu.'}
             </Text>
             <Text className="mt-3 text-center text-xs font-bold text-[#8cbf9a]">
-              Skill ini sekarang bisa dilihat di Profil Petualang.
+              Kemampuan ini sekarang bisa dilihat di Profil Petualang.
             </Text>
           </View>
 
@@ -532,7 +532,7 @@ function SkillUnlockModal({
             onPress={onClose}
             className="h-12 items-center justify-center rounded-2xl bg-[#e7bd68]"
           >
-            <Text className="text-sm font-black text-[#211c12]">Lihat skill saya</Text>
+              <Text className="text-sm font-black text-[#211c12]">Lihat kemampuan saya</Text>
           </Pressable>
         </View>
       </View>
@@ -2173,10 +2173,10 @@ export default function App() {
 
         <View className="mb-7 gap-3">
           <RadarCard
-            title="Skill"
-            description="Kekuatan skill yang telah terbuka."
+            title="Kemampuan"
+            description="Kemampuan yang telah terbuka."
             axes={skillRadarAxes}
-            emptyMessage="Selesaikan misi ber-reward skill untuk membuka data radar."
+            emptyMessage="Selesaikan misi ber-reward kemampuan untuk membuka data radar."
             accent="#8cbf9a"
           />
           <RadarCard
@@ -2246,7 +2246,7 @@ export default function App() {
                     {category === 'all'
                       ? 'Semua'
                       : category === 'system'
-                        ? 'Bawaan system'
+                        ? 'Sistem'
                         : category === 'personal'
                           ? 'Pribadi'
                           : 'Guild'}
@@ -2855,6 +2855,14 @@ export default function App() {
             currentExperience={levelProgress.currentExperience}
             requiredExperience={levelProgress.requiredExperience}
             progressPercentage={levelProgress.percentage}
+            affiliateProfile={affiliateProfile}
+            onShareReferral={() => {
+              if (authUser?.affiliate_code) {
+                void Share.share({
+                  message: `Gunakan kode referral saya: ${authUser.affiliate_code}`,
+                });
+              }
+            }}
             onLogout={() => void handleLogout()}
           />
         ) : (
@@ -2965,7 +2973,7 @@ export default function App() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-sm font-extrabold text-[#f5f0e6]">Buka progression lengkap</Text>
-                  <Text className="mt-1 text-xs text-[#aaa49a]">Lihat skill dan riwayat EXP di layar khusus.</Text>
+              <Text className="mt-1 text-xs text-[#aaa49a]">Lihat kemampuan dan riwayat EXP di layar khusus.</Text>
                 </View>
                 <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
               </Pressable>
@@ -2990,7 +2998,7 @@ export default function App() {
             </View>
 
             <View className="mb-6 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
-              <Text className="text-base font-extrabold text-[#f5f0e6]">Program affiliate</Text>
+              <Text className="text-base font-extrabold text-[#f5f0e6]">Program referral</Text>
               <Text className="mt-1 text-xs leading-5 text-[#aaa49a]">
                 Bagikan kode ini agar pengguna baru dapat terhubung sebagai referralmu.
               </Text>
@@ -3060,7 +3068,7 @@ export default function App() {
               <GameStatRow label="Keberuntungan" value={authUser?.stats?.luck ?? 0} />
             </View>
 
-            <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Skill petualang</Text>
+            <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Kemampuan petualang</Text>
             {authUser?.skills?.length ? (
               authUser.skills.map((skill) => (
                 <SkillCard
@@ -3073,7 +3081,7 @@ export default function App() {
               ))
             ) : (
               <View className="mb-6 rounded-2xl border border-dashed border-[#49433a] bg-[#191a1f] p-4">
-                <Text className="text-sm text-[#85838a]">Belum ada skill yang terbuka.</Text>
+                <Text className="text-sm text-[#85838a]">Belum ada kemampuan yang terbuka.</Text>
               </View>
             )}
 
