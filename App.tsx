@@ -309,13 +309,8 @@ function formatMissionProgress(mission: Mission) {
 }
 
 function formatMissionSchedule(mission: Mission) {
-  const date = mission.mission_date
-    ? String(mission.mission_date).slice(0, 10).split('-').reverse().join('/')
-    : null;
   const time = mission.scheduled_time ? String(mission.scheduled_time).slice(0, 5).replace(':', '.') : null;
 
-  if (date && time) return `${date} · ${time}`;
-  if (date) return date;
   if (time) return `Pukul ${time}`;
   return 'Waktu fleksibel';
 }
@@ -388,11 +383,6 @@ function MissionCard({
         <Text className="mt-1 text-xs font-bold text-[#e7bd68]">
           {formatMissionCategory(mission.category)} · {formatMissionFrequency(mission.frequency)} · {formatMissionSchedule(mission)}
         </Text>
-        {mission.difficulty ? (
-          <Text className="mt-1 text-[10px] font-black uppercase tracking-[0.5px] text-[#b7a57c]">
-            {formatDifficulty(mission.difficulty)} · snapshot reward
-          </Text>
-        ) : null}
         {mission.failed && <Text className="mt-1 text-xs font-bold text-[#e87959]">Gagal</Text>}
         {formatMissionProgress(mission) ? <Text className="mt-1 text-xs font-bold text-[#8cbf9a]">{formatMissionProgress(mission)}</Text> : null}
         <Text className="mt-1 text-xs text-[#85838a]">{mission.detail}</Text>
@@ -2337,14 +2327,6 @@ export default function App() {
               <Text className="py-4 text-center text-sm text-[#85838a]">Belum ada misi.</Text>
             )}
 
-            <View className="mt-6 rounded-2xl border border-dashed border-[#49433a] bg-[#191a1f] p-4">
-              <View className="flex-row items-center">
-                <FontAwesomeIcon icon={faPlus} size={14} color="#e7bd68" />
-                <Text className="ml-3 flex-1 text-sm font-semibold text-[#aaa49a]">
-                  Misi baru segera hadir di guild.
-                </Text>
-              </View>
-            </View>
           </>
         ) : activeTab === 'Inventaris' ? (
           <>
