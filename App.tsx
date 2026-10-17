@@ -1171,8 +1171,12 @@ export default function App() {
   const [guildMissionDetail, setGuildMissionDetail] = useState('');
   const [guildMissionDate, setGuildMissionDate] = useState(getLocalDateValue());
   const [guildMissionTime, setGuildMissionTime] = useState(getLocalTimeValue());
-  const completedMissions = missions.filter((mission) => mission.completed).length;
-  const totalMissionXp = missions.reduce(
+  const activeDifficulty = authUser?.difficulty ?? 'easy';
+  const availableMissions = authSession
+    ? missions.filter((mission) => !mission.difficulty || mission.difficulty === activeDifficulty)
+    : missions;
+  const completedMissions = availableMissions.filter((mission) => mission.completed).length;
+  const totalMissionXp = availableMissions.reduce(
     (total, mission) =>
       total + (mission.completed && mission.reward.type === 'xp' ? mission.reward.amount : 0),
     0,
@@ -1182,12 +1186,11 @@ export default function App() {
   const nextLevelExperience =
     authUser?.stats?.experience_to_next_level ?? authUser?.experience_to_next_level ?? 100;
   const levelProgress = getLevelProgress(userExperience, userLevel, nextLevelExperience);
-  const activeDifficulty = authUser?.difficulty ?? 'easy';
   const activeDifficultyConfig = difficultyConfigs.find((item) => item.difficulty === activeDifficulty);
   const userProfile = authUser?.profile;
   const skillRadarAxes = getSkillRadarAxes(authUser?.skills);
   const statRadarAxes = getStatRadarAxes(authUser?.stats);
-  const categoryMissions = missions.filter((mission) => missionCategory === 'all' || (mission.category || 'system') === missionCategory);
+  const categoryMissions = availableMissions.filter((mission) => missionCategory === 'all' || (mission.category || 'system') === missionCategory);
   const frequencyMissions = categoryMissions.filter((mission) => (mission.frequency || 'daily') === missionFrequency);
   const visibleMissions = frequencyMissions.filter((mission) => {
     if (missionFilter === 'active') return !mission.completed && !mission.failed;
@@ -1912,13 +1915,13 @@ export default function App() {
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-xs font-semibold text-[#c5beb0]">Progres misi</Text>
             <Text className="text-xs font-extrabold text-[#e7bd68]">
-              {completedMissions}/{missions.length} selesai
+              {completedMissions}/{availableMissions.length} selesai
             </Text>
           </View>
           <View className="h-[7px] overflow-hidden rounded-full bg-[#484132]">
             <View
               className="h-full rounded-full bg-[#e7bd68]"
-              style={{ width: `${missions.length ? (completedMissions / missions.length) * 100 : 0}%` }}
+              style={{ width: `${availableMissions.length ? (completedMissions / availableMissions.length) * 100 : 0}%` }}
             />
           </View>
         </View>
@@ -2034,9 +2037,9 @@ export default function App() {
 
         {isMissionLoading ? (
           <Text className="py-4 text-center text-sm text-[#85838a]">Memuat data misi...</Text>
-        ) : missions.length ? (
+        ) : availableMissions.length ? (
           <View className="gap-3">
-            {missions.slice(0, 3).map((mission) => (
+            {availableMissions.slice(0, 3).map((mission) => (
               <MissionCard key={mission.id} mission={mission} onPress={openMissionDetails} />
             ))}
           </View>
@@ -2051,6 +2054,11 @@ export default function App() {
               <Text className="mt-2 text-sm leading-5 text-[#929097]">
                 Selesaikan tantanganmu dan kumpulkan XP untuk naik level.
               </Text>
+              {authSession ? (
+                <Text className="mt-2 text-xs font-bold text-[#e7bd68]">
+                  Difficulty aktif: {formatDifficulty(activeDifficulty)} · hanya misi {formatDifficulty(activeDifficulty)} yang ditampilkan.
+                </Text>
+              ) : null}
             </View>
 
             <View className="mb-4 flex-row rounded-2xl border border-[#34353d] bg-[#1b1c22] p-1">
@@ -2278,9 +2286,9 @@ export default function App() {
             </View>
 
             <Text className="mb-4 text-base font-extrabold text-[#f5f0e6]">Aktivitas terbaru</Text>
-            {missions.some((mission) => mission.completed) ? (
+            {availableMissions.some((mission) => mission.completed) ? (
               <View className="gap-3">
-                {missions
+                {availableMissions
                   .filter((mission) => mission.completed)
                   .map((mission) => (
                     <View
@@ -2847,10 +2855,10 @@ export default function App() {
             <View className="mb-6 flex-row gap-3">
               <SummaryCard
                 label="Misi selesai"
-                value={`${completedMissions}/${missions.length}`}
+                value={`${completedMissions}/${availableMissions.length}`}
                 icon={faFlag}
                 accent="#e7bd68"
-                progress={missions.length ? (completedMissions / missions.length) * 100 : 0}
+                progress={availableMissions.length ? (completedMissions / availableMissions.length) * 100 : 0}
               />
               <SummaryCard
                 label="Kesehatan"
