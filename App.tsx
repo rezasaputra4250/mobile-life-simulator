@@ -2344,7 +2344,7 @@ export default function App() {
 
         <View className="mb-6">
           <Text className="mb-3 text-xl font-extrabold text-[#f5f0e6]">Menu petualangan</Text>
-          <View className="flex-row flex-wrap justify-between gap-y-3">
+          <View className="flex-row flex-wrap gap-y-3">
             <HomeMenuCard
               icon={faFlag}
               label="Misi"

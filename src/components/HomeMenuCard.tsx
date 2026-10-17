@@ -16,7 +16,7 @@ export function HomeMenuCard({
   accessibilityLabel,
 }: HomeMenuCardProps) {
   return (
-    <View className="w-[23%] items-center">
+    <View className="w-1/4 items-center">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
