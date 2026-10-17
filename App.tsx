@@ -156,8 +156,6 @@ const initialMissions: Mission[] = [
 const navigationItems: { label: string; icon: IconProp }[] = [
   { label: 'Beranda', icon: faHouse },
   { label: 'Misi', icon: faFlag },
-  { label: 'Jurnal', icon: faBookOpen },
-  { label: 'Inventaris', icon: faScroll },
   { label: 'Guild', icon: faUsers },
   { label: 'Profil', icon: faUser },
 ];
