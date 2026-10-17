@@ -915,7 +915,7 @@ function AuthScreen({
                 placeholder: 'Kode affiliate (opsional)',
                 value: referralCode,
                 onChangeText: setReferralCode,
-                autoCapitalize: 'characters',
+                autoCapitalize: 'words',
               })}
 
             {renderInput({
@@ -1224,12 +1224,13 @@ export default function App() {
 
   useEffect(() => {
     if (!authSession) return;
+    const token = authSession.token;
     let isMounted = true;
 
     async function loadMissions() {
       setIsMissionLoading(true);
       try {
-        const result = await getMissions(authSession.token);
+        const result = await getMissions(token);
         if (isMounted) {
           setMissions(result.missions);
           setStreakDays(result.stats?.streak_days ?? 0);
@@ -1252,13 +1253,14 @@ export default function App() {
 
   useEffect(() => {
     if (!authSession) return;
+    const token = authSession.token;
     let isMounted = true;
 
     async function loadRpgCore() {
       try {
         const [difficultyResult, historyResult] = await Promise.all([
-          getDifficultyConfigs(authSession.token),
-          getExperienceHistory(authSession.token),
+          getDifficultyConfigs(token),
+          getExperienceHistory(token),
         ]);
         if (isMounted) {
           setDifficultyConfigs(difficultyResult.data);
@@ -1280,13 +1282,14 @@ export default function App() {
 
   useEffect(() => {
     if (!authSession) return;
+    const token = authSession.token;
     let isMounted = true;
 
     async function loadConnectedData() {
       try {
         const [affiliateResult, todoResult] = await Promise.all([
-          getAffiliateProfile(authSession.token),
-          getTodos(authSession.token),
+          getAffiliateProfile(token),
+          getTodos(token),
         ]);
         if (isMounted) {
           setAffiliateProfile(affiliateResult.affiliate);
@@ -1308,15 +1311,16 @@ export default function App() {
 
   useEffect(() => {
     if (!authSession) return;
+    const token = authSession.token;
     let isMounted = true;
 
     async function loadSocial() {
       setIsSocialLoading(true);
       try {
         const [friendsResult, partiesResult, guildsResult] = await Promise.all([
-          getFriends(authSession.token),
-          getParties(authSession.token),
-          getGuilds(authSession.token),
+          getFriends(token),
+          getParties(token),
+          getGuilds(token),
         ]);
         if (isMounted) {
           setFriends(friendsResult.friends);
@@ -1343,12 +1347,13 @@ export default function App() {
 
   useEffect(() => {
     if (!authSession) return;
+    const token = authSession.token;
     let isMounted = true;
 
     async function loadInventory() {
       setIsInventoryLoading(true);
       try {
-        const result = await getInventory(authSession.token);
+        const result = await getInventory(token);
         if (isMounted) {
           setInventory(result);
           setInventoryError('');
