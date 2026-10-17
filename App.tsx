@@ -103,6 +103,7 @@ import {
 import { HomeMenuCard } from './src/components/HomeMenuCard';
 import { RadarCard, type RadarAxis } from './src/components/RadarChart';
 import { ProfileLanding } from './src/components/ProfileLanding';
+import { clearSessionToken, setSessionToken } from './src/lib/session';
 import './global.css';
 
 const initialMissions: Mission[] = [
@@ -1480,6 +1481,7 @@ export default function App() {
             ? window.localStorage.getItem('auth_token')
             : await SecureStore.getItemAsync('auth_token');
         if (!token) return;
+        setSessionToken(token);
 
         try {
           const result = await getCurrentUser(token);
@@ -1504,6 +1506,7 @@ export default function App() {
             } else {
               await SecureStore.deleteItemAsync('auth_token');
             }
+          clearSessionToken();
           } else if (isMounted) {
             setAuthError(
               error instanceof Error
@@ -1678,6 +1681,7 @@ export default function App() {
   }, [authSession]);
 
   async function handleAuthenticated(session: AuthSession, rememberMe = true) {
+    setSessionToken(session.token);
     if (rememberMe) {
       if (Platform.OS === 'web') {
         window.localStorage.setItem('auth_token', session.token);
@@ -1743,6 +1747,7 @@ export default function App() {
   }
 
   async function handleLogout() {
+    clearSessionToken();
     try {
       if (Platform.OS === 'web') {
         window.localStorage.removeItem('auth_token');

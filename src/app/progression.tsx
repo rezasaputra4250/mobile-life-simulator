@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +8,7 @@ import {
   type ExperienceTransaction,
   type Progression,
 } from '../lib/authApi';
+import { getSessionToken } from '../lib/session';
 
 function getLevelProgress(totalExperience: number, level: number, nextLevelExperience: number) {
   let experienceSpent = 0;
@@ -38,7 +38,7 @@ export default function ProgressionScreen() {
   useEffect(() => {
     let isMounted = true;
     void (async () => {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await getSessionToken();
       if (!token) {
         if (isMounted) setMessage('Silakan masuk untuk melihat progression.');
         return;

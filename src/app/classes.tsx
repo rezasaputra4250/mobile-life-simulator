@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
+import { getSessionToken } from '../lib/session';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getClasses, getProgression, selectClass, type PlayerClass } from '../lib/authApi';
@@ -14,7 +14,7 @@ export default function ClassesScreen() {
 
   useEffect(() => {
     void (async () => {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await getSessionToken();
       if (!token) return;
       try {
         const [classesResult, progressionResult] = await Promise.all([getClasses(token), getProgression(token)]);
@@ -27,7 +27,7 @@ export default function ClassesScreen() {
   }, []);
 
   async function choose(classId: number) {
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await getSessionToken();
     if (!token) return;
     try {
       await selectClass(token, classId);

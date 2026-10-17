@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateProfile } from '../lib/authApi';
+import { getSessionToken } from '../lib/session';
 
 export default function ProfileEditScreen() {
   const [token, setToken] = useState<string | null>(null);
@@ -18,7 +18,7 @@ export default function ProfileEditScreen() {
 
   useEffect(() => {
     void (async () => {
-      const savedToken = await SecureStore.getItemAsync('auth_token');
+      const savedToken = await getSessionToken();
       if (!savedToken) return;
       setToken(savedToken);
       try {

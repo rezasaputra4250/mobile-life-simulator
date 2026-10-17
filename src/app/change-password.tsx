@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { changePassword } from '../lib/authApi';
+import { getSessionToken } from '../lib/session';
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -15,7 +15,7 @@ export default function ChangePasswordScreen() {
   async function save() {
     if (newPassword.length < 8) return setMessage('Password baru minimal 8 karakter.');
     if (newPassword !== confirmPassword) return setMessage('Konfirmasi password tidak sama.');
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await getSessionToken();
     if (!token) return setMessage('Sesi login tidak ditemukan.');
     setIsSaving(true);
     setMessage('');

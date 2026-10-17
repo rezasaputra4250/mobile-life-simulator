@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import {
   type Progression,
 } from '../../lib/authApi';
 import { ProfilePageHeader } from '../../components/ProfilePageHeader';
+import { getSessionToken } from '../../lib/session';
 
 const difficultyLabels: Record<Difficulty, string> = {
   easy: 'Mudah',
@@ -36,7 +36,7 @@ export default function ProfileDetailScreen() {
   useEffect(() => {
     let isMounted = true;
     void (async () => {
-      const token = await SecureStore.getItemAsync('auth_token');
+      const token = await getSessionToken();
       if (!token) {
         if (isMounted) setMessage('Silakan masuk untuk melihat data player.');
         return;
@@ -66,7 +66,7 @@ export default function ProfileDetailScreen() {
   }, [section]);
 
   async function changeDifficulty(difficulty: Difficulty) {
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await getSessionToken();
     if (!token || isSaving) return;
     setIsSaving(true);
     try {

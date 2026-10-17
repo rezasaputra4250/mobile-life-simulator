@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { Link } from 'expo-router';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createCustomMission } from '../lib/authApi';
+import { getSessionToken } from '../lib/session';
 
 export default function MissionCreateScreen() {
   const [title, setTitle] = useState('');
@@ -12,7 +12,7 @@ export default function MissionCreateScreen() {
   const [message, setMessage] = useState('');
 
   async function submit() {
-    const token = await SecureStore.getItemAsync('auth_token');
+    const token = await getSessionToken();
     if (!token || !title.trim()) { setMessage('Judul misi wajib diisi.'); return; }
     try {
       await createCustomMission(token, {
