@@ -1,4 +1,5 @@
 import axios, { isAxiosError } from 'axios';
+import { showErrorToast } from './toast';
 import Constants from 'expo-constants';
 
 export type AuthUser = {
@@ -190,7 +191,9 @@ async function request<T>(
   options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: object; token?: string } = {},
 ): Promise<T> {
   if (!apiBaseUrl) {
-    throw new Error('URL API belum diatur. Isi EXPO_PUBLIC_API_URL pada file .env.');
+    const message = 'URL API belum diatur. Isi EXPO_PUBLIC_API_URL pada file .env.';
+    showErrorToast(message);
+    throw new Error(message);
   }
 
   const method = options.method ?? 'GET';
@@ -238,26 +241,28 @@ async function request<T>(
       }
 
       if (!error.response) {
-        throw new Error(
-          'Tidak dapat terhubung ke backend. Periksa koneksi dan EXPO_PUBLIC_API_URL.',
-        );
+        const message = 'Tidak dapat terhubung ke backend. Periksa koneksi dan EXPO_PUBLIC_API_URL.';
+        showErrorToast(message);
+        throw new Error(message);
       }
 
       const payload = error.response.data;
       const apiMessage: Partial<ApiMessage> =
         payload !== null && typeof payload === 'object' ? (payload as Partial<ApiMessage>) : {};
       const validationMessages = apiMessage.errors?.map((item) => item.message).filter(Boolean);
-      throw new ApiError(
-        validationMessages?.join('\n') || apiMessage.message || 'Permintaan ke backend gagal.',
-        error.response.status,
-      );
+      const message = validationMessages?.join('\n') || apiMessage.message || 'Permintaan ke backend gagal.';
+      showErrorToast(message);
+      throw new ApiError(message, error.response.status);
     }
 
     if (error instanceof Error) {
+      showErrorToast(error.message);
       throw error;
     }
 
-    throw new Error('Terjadi kesalahan saat menghubungi backend.');
+    const message = 'Terjadi kesalahan saat menghubungi backend.';
+    showErrorToast(message);
+    throw new Error(message);
   }
 }
 
