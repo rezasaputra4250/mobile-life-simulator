@@ -1732,9 +1732,13 @@ export default function App() {
   async function handleOnboardingDifficulty(difficulty: Difficulty) {
     if (!authSession) return;
     await updateDifficulty(authSession.token, difficulty);
-    const profileResult = await getCurrentUser(authSession.token);
+    const [profileResult, progressionResult] = await Promise.all([
+      getCurrentUser(authSession.token),
+      getProgression(authSession.token),
+    ]);
     setAuthUser(profileResult.user);
     setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+    setProgression(progressionResult.data);
     setOnboardingStep('class');
   }
 
@@ -1752,9 +1756,13 @@ export default function App() {
     setIsDifficultySaving(true);
     try {
       await updateDifficulty(authSession.token, difficulty);
-      const profileResult = await getCurrentUser(authSession.token);
+      const [profileResult, progressionResult] = await Promise.all([
+        getCurrentUser(authSession.token),
+        getProgression(authSession.token),
+      ]);
       setAuthUser(profileResult.user);
       setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+      setProgression(progressionResult.data);
       setDifficultyError('');
     } catch (error) {
       setDifficultyError(error instanceof Error ? error.message : 'Difficulty belum dapat diperbarui.');

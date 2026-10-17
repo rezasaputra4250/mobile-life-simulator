@@ -43,13 +43,15 @@ export default function ProfileDetailScreen() {
       }
       try {
         if (section === 'difficulty') {
-          const [userResult, configResult] = await Promise.all([
+          const [userResult, configResult, progressionResult] = await Promise.all([
             getCurrentUser(token),
             getDifficultyConfigs(token),
+            getProgression(token),
           ]);
           if (isMounted) {
             setUser(userResult.user);
             setDifficultyConfigs(configResult.data);
+            setProgression(progressionResult.data);
           }
         } else if (section === 'badges') {
           if (isMounted) setInventory(await getInventory(token));
@@ -72,6 +74,7 @@ export default function ProfileDetailScreen() {
     try {
       await updateDifficulty(token, difficulty);
       setUser((current) => current ? { ...current, difficulty } : current);
+      setProgression((await getProgression(token)).data);
       setMessage('Difficulty berhasil diperbarui.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Difficulty belum dapat diperbarui.');
@@ -100,6 +103,13 @@ export default function ProfileDetailScreen() {
       {section === 'difficulty' ? (
         <View className="mt-6 gap-3">
           <Text className="text-sm leading-5 text-[#aaa49a]">Difficulty menentukan reward untuk mission baru. Mission lama tidak berubah.</Text>
+          {progression?.character ? (
+            <View className="rounded-2xl border border-[#5a482a] bg-[#342b1b] p-4">
+              <Text className="text-xs font-bold uppercase tracking-[1px] text-[#9c927e]">Batas EXP aktif</Text>
+              <Text className="mt-1 text-2xl font-black text-[#e7bd68]">{progression.character.experience_to_next_level} EXP</Text>
+              <Text className="mt-1 text-xs text-[#aaa49a]">Kebutuhan menuju level {progression.character.level + 1} pada difficulty yang dipilih.</Text>
+            </View>
+          ) : null}
           {(['easy', 'normal', 'hard', 'expert'] as Difficulty[]).map((difficulty) => (
             <Pressable
               key={difficulty}
