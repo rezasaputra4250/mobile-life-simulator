@@ -1,17 +1,18 @@
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, type PressableProps } from 'react-native';
 
 type ProfileOptionCardProps = {
   icon: IconProp;
   label: string;
   description: string;
-};
+} & PressableProps;
 
-export function ProfileOptionCard({ icon, label, description }: ProfileOptionCardProps) {
+export function ProfileOptionCard({ icon, label, description, ...pressableProps }: ProfileOptionCardProps) {
   return (
     <Pressable
+      {...pressableProps}
       accessibilityRole="button"
       className="mb-3 flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4 active:border-[#8a6d38] active:bg-[#242118]"
     >

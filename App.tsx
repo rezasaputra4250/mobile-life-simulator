@@ -57,7 +57,6 @@ import {
   getExperienceHistory,
   getProgression,
   getAffiliateProfile,
-  getTodos,
   createTodo,
   updateTodo,
   deleteTodo,
@@ -1512,14 +1511,9 @@ export default function App() {
 
     async function loadConnectedData() {
       try {
-        const [affiliateResult, todoResult] = await Promise.all([
-          getAffiliateProfile(token),
-          getTodos(token),
-        ]);
+        const affiliateResult = await getAffiliateProfile(token);
         if (isMounted) {
           setAffiliateProfile(affiliateResult.affiliate);
-          setTodos(todoResult.todos);
-          setTodoError('');
         }
       } catch (error) {
         if (isMounted) {
