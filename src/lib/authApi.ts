@@ -1,5 +1,5 @@
 import axios, { isAxiosError } from 'axios';
-import { showErrorToast } from './toast';
+import { showErrorModal } from './errorModal';
 import Constants from 'expo-constants';
 
 export type AuthUser = {
@@ -192,7 +192,7 @@ async function request<T>(
 ): Promise<T> {
   if (!apiBaseUrl) {
     const message = 'URL API belum diatur. Isi EXPO_PUBLIC_API_URL pada file .env.';
-    showErrorToast(message);
+    showErrorModal(message);
     throw new Error(message);
   }
 
@@ -242,7 +242,7 @@ async function request<T>(
 
       if (!error.response) {
         const message = 'Tidak dapat terhubung ke backend. Periksa koneksi dan EXPO_PUBLIC_API_URL.';
-        showErrorToast(message);
+        showErrorModal(message);
         throw new Error(message);
       }
 
@@ -251,17 +251,17 @@ async function request<T>(
         payload !== null && typeof payload === 'object' ? (payload as Partial<ApiMessage>) : {};
       const validationMessages = apiMessage.errors?.map((item) => item.message).filter(Boolean);
       const message = validationMessages?.join('\n') || apiMessage.message || 'Permintaan ke backend gagal.';
-      showErrorToast(message);
+      showErrorModal(message);
       throw new ApiError(message, error.response.status);
     }
 
     if (error instanceof Error) {
-      showErrorToast(error.message);
+      showErrorModal(error.message);
       throw error;
     }
 
     const message = 'Terjadi kesalahan saat menghubungi backend.';
-    showErrorToast(message);
+    showErrorModal(message);
     throw new Error(message);
   }
 }

@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import Toast from 'react-native-toast-message';
+import { ErrorModalHost } from '../lib/errorModal';
 import '../../global.css';
 
 export default function RootLayout() {
@@ -12,7 +12,7 @@ export default function RootLayout() {
         <Stack.Screen name="progression" />
         <Stack.Screen name="profile/[section]" />
       </Stack>
-      <Toast />
+      <ErrorModalHost />
     </>
   );
 }
