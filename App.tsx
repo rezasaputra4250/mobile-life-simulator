@@ -776,7 +776,7 @@ function AuthScreen({
       return;
     }
     if (screen === 'register' && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate.trim())) {
-      setFormError('Tanggal lahir gunakan format YYYY-MM-DD.');
+      setFormError('Pilih tanggal lahir terlebih dahulu.');
       return;
     }
     if (screen === 'register' && !gender) {
@@ -989,13 +989,14 @@ function AuthScreen({
 
             {screen === 'register' && (
               <>
-                {renderInput({
-                  icon: faCalendarCheck,
-                  placeholder: 'Tanggal lahir (YYYY-MM-DD)',
-                  value: birthDate,
-                  onChangeText: setBirthDate,
-                  keyboardType: 'default',
-                })}
+                <View className="mb-3">
+                  <PickerField
+                    label="Tanggal lahir"
+                    value={birthDate ? parseDateValue(birthDate) : new Date(2000, 0, 1)}
+                    mode="date"
+                    onChange={(value) => setBirthDate(formatDateValue(value))}
+                  />
+                </View>
                 <Text className="mb-2 mt-1 text-[10px] font-black uppercase tracking-[1px] text-[#9c927e]">Jenis kelamin</Text>
                 <View className="mb-3 flex-row gap-2">
                   {([
