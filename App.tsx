@@ -103,7 +103,13 @@ import {
 import { HomeMenuCard } from './src/components/HomeMenuCard';
 import { RadarCard, type RadarAxis } from './src/components/RadarChart';
 import { ProfileLanding } from './src/components/ProfileLanding';
-import { clearSessionToken, setSessionToken } from './src/lib/session';
+import {
+  clearSessionToken,
+  getSessionToken,
+  hasStartedSessionRuntime,
+  markSessionRuntimeStarted,
+  setSessionToken,
+} from './src/lib/session';
 import './global.css';
 
 const initialMissions: Mission[] = [
@@ -1476,11 +1482,22 @@ export default function App() {
 
     async function restoreSession() {
       try {
-        const token =
-          Platform.OS === 'web'
-            ? window.localStorage.getItem('auth_token')
-            : await SecureStore.getItemAsync('auth_token');
+        const token = await getSessionToken();
         if (!token) return;
+        const rememberValue = Platform.OS === 'web'
+          ? window.localStorage.getItem('auth_remembered')
+          : await SecureStore.getItemAsync('auth_remembered');
+        if (rememberValue === 'false' && !hasStartedSessionRuntime()) {
+          if (Platform.OS === 'web') {
+            window.localStorage.removeItem('auth_token');
+            window.localStorage.removeItem('auth_remembered');
+          } else {
+            await SecureStore.deleteItemAsync('auth_token');
+            await SecureStore.deleteItemAsync('auth_remembered');
+          }
+          return;
+        }
+        markSessionRuntimeStarted();
         setSessionToken(token);
 
         try {
@@ -1681,17 +1698,14 @@ export default function App() {
   }, [authSession]);
 
   async function handleAuthenticated(session: AuthSession, rememberMe = true) {
+    markSessionRuntimeStarted();
     setSessionToken(session.token);
-    if (rememberMe) {
-      if (Platform.OS === 'web') {
-        window.localStorage.setItem('auth_token', session.token);
-      } else {
-        await SecureStore.setItemAsync('auth_token', session.token);
-      }
-    } else if (Platform.OS === 'web') {
-      window.localStorage.removeItem('auth_token');
+    if (Platform.OS === 'web') {
+      window.localStorage.setItem('auth_token', session.token);
+      window.localStorage.setItem('auth_remembered', String(rememberMe));
     } else {
-      await SecureStore.deleteItemAsync('auth_token');
+      await SecureStore.setItemAsync('auth_token', session.token);
+      await SecureStore.setItemAsync('auth_remembered', String(rememberMe));
     }
     setAuthSession(session);
     setAuthUser(session.user);
@@ -1751,8 +1765,10 @@ export default function App() {
     try {
       if (Platform.OS === 'web') {
         window.localStorage.removeItem('auth_token');
+      window.localStorage.removeItem('auth_remembered');
       } else {
         await SecureStore.deleteItemAsync('auth_token');
+      await SecureStore.deleteItemAsync('auth_remembered');
       }
     } catch {
       setAuthError('Token sesi tidak dapat dihapus dari penyimpanan perangkat.');
