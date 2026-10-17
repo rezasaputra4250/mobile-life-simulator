@@ -8,26 +8,20 @@ export default function MissionCreateScreen() {
   const [title, setTitle] = useState('');
   const [detail, setDetail] = useState('');
   const [missionDate, setMissionDate] = useState(getLocalDate());
-  const [rewardXp, setRewardXp] = useState('25');
   const [message, setMessage] = useState('');
 
   async function submit() {
     const token = await SecureStore.getItemAsync('auth_token');
     if (!token || !title.trim()) { setMessage('Judul misi wajib diisi.'); return; }
-    const parsedReward = Number(rewardXp);
-    if (!Number.isInteger(parsedReward) || parsedReward < 1 || parsedReward > 500) { setMessage('Reward XP harus berupa angka 1 sampai 500.'); return; }
     try {
       await createCustomMission(token, {
         title: title.trim(),
         detail: detail.trim() || undefined,
-        difficulty: parsedReward > 100 ? 'epic' : parsedReward > 50 ? 'hard' : parsedReward > 25 ? 'medium' : 'easy',
         mission_date: missionDate,
-        reward_xp: parsedReward,
       });
       setTitle('');
       setDetail('');
       setMissionDate(getLocalDate());
-      setRewardXp('25');
       setMessage('Misi berhasil dibuat dan masuk kategori Pribadi.');
     }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Misi gagal dibuat.'); }
@@ -43,7 +37,10 @@ export default function MissionCreateScreen() {
       <Text className="mt-4 text-xs font-bold uppercase tracking-[1px] text-[#aaa49a]">Waktu pelaksanaan</Text>
       <TextInput value={missionDate} onChangeText={setMissionDate} placeholder="YYYY-MM-DD" placeholderTextColor="#77757d" keyboardType="numbers-and-punctuation" maxLength={10} className="mt-2 rounded-xl border border-[#5a482a] bg-[#242118] px-4 py-3 text-[#f5f0e6]" />
       <Text className="mt-1 text-xs text-[#77757d]">Gunakan format tanggal seperti 2026-10-16.</Text>
-      <TextInput value={rewardXp} onChangeText={setRewardXp} placeholder="Reward XP" placeholderTextColor="#77757d" keyboardType="number-pad" maxLength={3} className="mt-3 rounded-xl border border-[#5a482a] bg-[#242118] px-4 py-3 text-[#f5f0e6]" />
+      <View className="mt-3 rounded-xl border border-[#5a482a] bg-[#342b1b] px-4 py-3">
+        <Text className="text-xs font-bold text-[#e7bd68]">Reward mengikuti difficulty aktif akun.</Text>
+        <Text className="mt-1 text-xs text-[#aaa49a]">Ubah difficulty dari Profil untuk mission baru berikutnya.</Text>
+      </View>
       <Pressable onPress={() => void submit()} className="mt-4 items-center rounded-xl bg-[#e7bd68] px-4 py-3"><Text className="font-black text-[#211c12]">Buat misi</Text></Pressable>
       {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
     </View>

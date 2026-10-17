@@ -52,6 +52,8 @@ import {
   contributeGuildMission,
   getFriends,
   getInventory,
+  getDifficultyConfigs,
+  getExperienceHistory,
   getAffiliateProfile,
   getTodos,
   createTodo,
@@ -75,6 +77,7 @@ import {
   removePartyMember,
   getParties,
   toggleMission as toggleMissionApi,
+  updateDifficulty,
   type AuthSession,
   type AuthUser,
   type FriendRequest,
@@ -88,6 +91,9 @@ import {
   type GuildInvitation,
   type AffiliateProfile,
   type Todo,
+  type Difficulty,
+  type DifficultyConfig,
+  type ExperienceTransaction,
 } from './src/lib/authApi';
 import './global.css';
 
@@ -178,6 +184,26 @@ function formatDateValue(value: Date) {
 
 function formatTimeValue(value: Date) {
   return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+}
+
+function getLevelProgress(totalExperience: number, level: number, nextLevelExperience: number) {
+  let experienceSpent = 0;
+  for (let currentLevel = 1; currentLevel < Math.max(1, level); currentLevel += 1) {
+    experienceSpent += Math.max(100, Math.round(100 * (1.5 ** (currentLevel - 1))));
+  }
+  const currentExperience = Math.max(0, totalExperience - experienceSpent);
+  return {
+    currentExperience,
+    requiredExperience: Math.max(1, nextLevelExperience),
+    percentage: Math.min(100, (currentExperience / Math.max(1, nextLevelExperience)) * 100),
+  };
+}
+
+function formatDifficulty(value?: Difficulty) {
+  if (value === 'normal') return 'Normal';
+  if (value === 'hard') return 'Hard';
+  if (value === 'expert') return 'Expert';
+  return 'Easy';
 }
 
 function PickerField({
@@ -323,6 +349,11 @@ function MissionCard({
         <Text className="mt-1 text-xs font-bold text-[#e7bd68]">
           {formatMissionCategory(mission.category)} · {formatMissionFrequency(mission.frequency)} · {formatMissionSchedule(mission)}
         </Text>
+        {mission.difficulty ? (
+          <Text className="mt-1 text-[10px] font-black uppercase tracking-[0.5px] text-[#b7a57c]">
+            {formatDifficulty(mission.difficulty)} · snapshot reward
+          </Text>
+        ) : null}
         {mission.failed && <Text className="mt-1 text-xs font-bold text-[#e87959]">Gagal</Text>}
         {formatMissionProgress(mission) ? <Text className="mt-1 text-xs font-bold text-[#8cbf9a]">{formatMissionProgress(mission)}</Text> : null}
         <Text className="mt-1 text-xs text-[#85838a]">{mission.detail}</Text>
@@ -1054,6 +1085,10 @@ export default function App() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
+  const [experienceHistory, setExperienceHistory] = useState<ExperienceTransaction[]>([]);
+  const [difficultyError, setDifficultyError] = useState('');
+  const [isDifficultySaving, setIsDifficultySaving] = useState(false);
   const [missionError, setMissionError] = useState('');
   const [isMissionLoading, setIsMissionLoading] = useState(false);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
@@ -1067,7 +1102,6 @@ export default function App() {
   const [personalMissionDetail, setPersonalMissionDetail] = useState('');
   const [personalMissionDate, setPersonalMissionDate] = useState(getLocalDateValue());
   const [personalMissionTime, setPersonalMissionTime] = useState(getLocalTimeValue());
-  const [personalMissionReward, setPersonalMissionReward] = useState('25');
   const [personalMissionError, setPersonalMissionError] = useState('');
   const [inventory, setInventory] = useState<InventoryData>({
     items: [],
@@ -1102,7 +1136,6 @@ export default function App() {
   const [guildMissionDetail, setGuildMissionDetail] = useState('');
   const [guildMissionDate, setGuildMissionDate] = useState(getLocalDateValue());
   const [guildMissionTime, setGuildMissionTime] = useState(getLocalTimeValue());
-  const [guildMissionReward, setGuildMissionReward] = useState('25');
   const completedMissions = missions.filter((mission) => mission.completed).length;
   const totalMissionXp = missions.reduce(
     (total, mission) =>
@@ -1113,6 +1146,9 @@ export default function App() {
   const userExperience = authUser?.stats?.experience ?? authUser?.experience ?? 0;
   const nextLevelExperience =
     authUser?.stats?.experience_to_next_level ?? authUser?.experience_to_next_level ?? 100;
+  const levelProgress = getLevelProgress(userExperience, userLevel, nextLevelExperience);
+  const activeDifficulty = authUser?.difficulty ?? 'easy';
+  const activeDifficultyConfig = difficultyConfigs.find((item) => item.difficulty === activeDifficulty);
   const userProfile = authUser?.profile;
   const categoryMissions = missions.filter((mission) => missionCategory === 'all' || (mission.category || 'system') === missionCategory);
   const frequencyMissions = categoryMissions.filter((mission) => (mission.frequency || 'daily') === missionFrequency);
@@ -1205,6 +1241,34 @@ export default function App() {
     }
 
     void loadMissions();
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession) return;
+    let isMounted = true;
+
+    async function loadRpgCore() {
+      try {
+        const [difficultyResult, historyResult] = await Promise.all([
+          getDifficultyConfigs(authSession.token),
+          getExperienceHistory(authSession.token),
+        ]);
+        if (isMounted) {
+          setDifficultyConfigs(difficultyResult.data);
+          setExperienceHistory(historyResult.data);
+          setDifficultyError('');
+        }
+      } catch (error) {
+        if (isMounted) {
+          setDifficultyError(error instanceof Error ? error.message : 'Data progression belum dapat dimuat.');
+        }
+      }
+    }
+
+    void loadRpgCore();
     return () => {
       isMounted = false;
     };
@@ -1314,6 +1378,22 @@ export default function App() {
     setAuthError('');
   }
 
+  async function handleDifficultyChange(difficulty: Difficulty) {
+    if (!authSession || authUser?.difficulty === difficulty || isDifficultySaving) return;
+    setIsDifficultySaving(true);
+    try {
+      await updateDifficulty(authSession.token, difficulty);
+      const profileResult = await getCurrentUser(authSession.token);
+      setAuthUser(profileResult.user);
+      setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+      setDifficultyError('');
+    } catch (error) {
+      setDifficultyError(error instanceof Error ? error.message : 'Difficulty belum dapat diperbarui.');
+    } finally {
+      setIsDifficultySaving(false);
+    }
+  }
+
   async function handleLogout() {
     try {
       if (Platform.OS === 'web') {
@@ -1369,13 +1449,8 @@ export default function App() {
   }
 
   async function handleCreatePersonalMission() {
-    const rewardXp = Number(personalMissionReward);
     if (!authSession || personalMissionTitle.trim().length < 2) {
       setPersonalMissionError('Judul misi pribadi minimal 2 karakter.');
-      return;
-    }
-    if (!Number.isInteger(rewardXp) || rewardXp < 1 || rewardXp > 500) {
-      setPersonalMissionError('Reward XP harus berupa angka 1 sampai 500.');
       return;
     }
     try {
@@ -1384,8 +1459,6 @@ export default function App() {
         detail: personalMissionDetail.trim() || undefined,
         mission_date: personalMissionDate,
         scheduled_time: personalMissionTime,
-        reward_xp: rewardXp,
-        difficulty: rewardXp > 100 ? 'epic' : rewardXp > 50 ? 'hard' : rewardXp > 25 ? 'medium' : 'easy',
       });
       const missionsResult = await getMissions(authSession.token);
       setMissions(missionsResult.missions);
@@ -1394,7 +1467,6 @@ export default function App() {
       setPersonalMissionDetail('');
       setPersonalMissionDate(getLocalDateValue());
       setPersonalMissionTime(getLocalTimeValue());
-      setPersonalMissionReward('25');
       setPersonalMissionError('');
       setMissionComposerType(null);
       setIsMissionComposerOpen(false);
@@ -1566,15 +1638,13 @@ export default function App() {
         detail: guildMissionDetail.trim() || undefined,
         mission_date: guildMissionDate,
         scheduled_time: guildMissionTime,
-        reward_xp: Number(guildMissionReward) || undefined,
-        difficulty: 'medium',
+        difficulty: 'normal',
         target_progress: 5,
       });
       setGuildMissionTitle('');
       setGuildMissionDetail('');
       setGuildMissionDate(getLocalDateValue());
       setGuildMissionTime(getLocalTimeValue());
-      setGuildMissionReward('25');
       setMissionComposerType(null);
       setIsMissionComposerOpen(false);
       await refreshSocial();
@@ -2581,18 +2651,81 @@ export default function App() {
                     Pengalaman menuju Lv. {userLevel + 1}
                   </Text>
                   <Text className="text-xs font-extrabold text-[#e7bd68]">
-                    {userExperience} / {nextLevelExperience} XP
+                    {levelProgress.currentExperience} / {levelProgress.requiredExperience} XP
                   </Text>
                 </View>
                 <View className="h-[7px] overflow-hidden rounded-full bg-[#484132]">
                   <View
                     className="h-full rounded-full bg-[#e7bd68]"
                     style={{
-                      width: `${Math.min((userExperience / Math.max(nextLevelExperience, 1)) * 100, 100)}%`,
+                      width: `${levelProgress.percentage}%`,
                     }}
                   />
                 </View>
               </View>
+            </View>
+
+            <View className="mb-5 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+              <View className="flex-row items-center">
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#3a3020]">
+                  <FontAwesomeIcon icon={faCompass} size={17} color="#e7bd68" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-extrabold text-[#f5f0e6]">Difficulty petualangan</Text>
+                  <Text className="mt-1 text-xs text-[#aaa49a]">Berlaku untuk misi baru. Misi lama tetap menggunakan konfigurasi sebelumnya.</Text>
+                </View>
+              </View>
+              <View className="mt-4 flex-row gap-2">
+                {(['easy', 'normal', 'hard', 'expert'] as Difficulty[]).map((difficulty) => (
+                  <Pressable
+                    key={difficulty}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: activeDifficulty === difficulty }}
+                    disabled={isDifficultySaving}
+                    onPress={() => void handleDifficultyChange(difficulty)}
+                    className={`flex-1 rounded-xl border px-2 py-2.5 ${activeDifficulty === difficulty ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#1b1c22]'}`}
+                  >
+                    <Text className={`text-center text-[10px] font-black ${activeDifficulty === difficulty ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>
+                      {formatDifficulty(difficulty)}
+                    </Text>
+                    <Text className="mt-1 text-center text-[9px] text-[#aaa49a]">
+                      +{difficultyConfigs.find((item) => item.difficulty === difficulty)?.base_reward_xp ?? '—'} XP
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {difficultyError ? <Text className="mt-3 text-xs text-[#f1a39a]">{difficultyError}</Text> : null}
+            </View>
+
+            <Link href="/progression" asChild>
+              <Pressable className="mb-5 flex-row items-center rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#3a3020]">
+                  <FontAwesomeIcon icon={faStar} size={17} color="#e7bd68" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-extrabold text-[#f5f0e6]">Buka progression lengkap</Text>
+                  <Text className="mt-1 text-xs text-[#aaa49a]">Lihat skill dan riwayat EXP di layar khusus.</Text>
+                </View>
+                <FontAwesomeIcon icon={faChevronRight} size={14} color="#e7bd68" />
+              </Pressable>
+            </Link>
+
+            <View className="mb-5 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+              <View className="mb-3 flex-row items-center justify-between">
+                <Text className="text-base font-extrabold text-[#f5f0e6]">Riwayat EXP</Text>
+                <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#85838a]">100 terbaru</Text>
+              </View>
+              {experienceHistory.length ? experienceHistory.slice(0, 5).map((transaction) => (
+                <View key={transaction.id} className="mb-2 flex-row items-center rounded-xl bg-[#24252c] px-3 py-2.5">
+                  <View className="flex-1">
+                    <Text className="text-xs font-bold text-[#f1ede4]">{transaction.reason || transaction.source_type}</Text>
+                    <Text className="mt-1 text-[10px] text-[#85838a]">{new Date(transaction.created_at).toLocaleDateString('id-ID')}</Text>
+                  </View>
+                  <Text className={`text-xs font-black ${transaction.amount >= 0 ? 'text-[#8cbf9a]' : 'text-[#f1a39a]'}`}>
+                    {transaction.amount >= 0 ? '+' : ''}{transaction.amount} XP
+                  </Text>
+                </View>
+              )) : <Text className="text-xs text-[#85838a]">Belum ada transaksi EXP.</Text>}
             </View>
 
             <View className="mb-6 rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
@@ -2645,7 +2778,7 @@ export default function App() {
                 value={userExperience}
                 icon={faBolt}
                 accent="#8cbf9a"
-                progress={(userExperience / Math.max(nextLevelExperience, 1)) * 100}
+                progress={levelProgress.percentage}
               />
             </View>
 
@@ -2837,16 +2970,10 @@ export default function App() {
                         />
                       </View>
                     </View>
-                    <Text className="mb-1 mt-3 text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Reward XP</Text>
-                    <TextInput
-                      value={personalMissionReward}
-                      onChangeText={setPersonalMissionReward}
-                      placeholder="25"
-                      placeholderTextColor="#77757d"
-                      keyboardType="number-pad"
-                      maxLength={3}
-                      className="h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
-                    />
+                    <View className="mt-3 rounded-xl border border-[#66522c] bg-[#342b1b] px-3 py-3">
+                      <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Reward berdasarkan difficulty aktif</Text>
+                      <Text className="mt-1 text-sm font-black text-[#e7bd68]">{formatDifficulty(activeDifficulty)} · +{activeDifficultyConfig?.base_reward_xp ?? '—'} XP</Text>
+                    </View>
                     <Pressable
                       accessibilityRole="button"
                       onPress={() => void handleCreatePersonalMission()}
@@ -2895,16 +3022,10 @@ export default function App() {
                             />
                           </View>
                         </View>
-                        <Text className="mb-1 mt-2 text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Reward XP per kontribusi</Text>
-                        <TextInput
-                          value={guildMissionReward}
-                          onChangeText={setGuildMissionReward}
-                          placeholder="25"
-                          placeholderTextColor="#77757d"
-                          keyboardType="number-pad"
-                          maxLength={3}
-                          className="h-10 rounded-lg border border-[#34353d] bg-[#121318] px-3 text-xs text-[#f5f0e6]"
-                        />
+                        <View className="mt-2 rounded-lg border border-[#66522c] bg-[#342b1b] px-3 py-2.5">
+                          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#9c927e]">Reward kontribusi</Text>
+                          <Text className="mt-1 text-xs font-black text-[#e7bd68]">Normal · +{difficultyConfigs.find((item) => item.difficulty === 'normal')?.base_reward_xp ?? '—'} XP</Text>
+                        </View>
                         <Pressable
                           accessibilityRole="button"
                           onPress={() => void handleCreateGuildMission(guild.id)}

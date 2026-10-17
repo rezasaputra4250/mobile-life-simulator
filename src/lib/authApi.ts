@@ -7,6 +7,7 @@ export type AuthUser = {
   email: string;
   affiliate_code?: string | null;
   referred_by?: number | null;
+  difficulty?: Difficulty;
   level?: number;
   experience?: number;
   experience_to_next_level?: number;
@@ -60,6 +61,8 @@ export type Mission = {
   guild_mission_id?: number;
   guild_id?: number;
   category?: 'system' | 'personal' | 'guild';
+  source?: 'system' | 'personal' | 'guild';
+  difficulty?: Difficulty;
   mission_date?: string;
   frequency?: 'daily' | 'weekly' | 'monthly';
   scheduled_time?: string | null;
@@ -83,6 +86,22 @@ export type MissionReward = {
   description: string | null;
   icon_key: string;
   amount: number;
+};
+
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'expert';
+
+export type DifficultyConfig = {
+  difficulty: Difficulty;
+  base_reward_xp: number;
+};
+
+export type ExperienceTransaction = {
+  id: number;
+  source_type: string;
+  source_id: number | null;
+  amount: number;
+  reason: string | null;
+  created_at: string;
 };
 
 export type InventoryItem = {
@@ -316,6 +335,22 @@ export function getProgression(token: string) {
   return request<{ message: string; data: Progression }>('/v1/me/progression', { token });
 }
 
+export function getDifficultyConfigs(token: string) {
+  return request<{ message: string; data: DifficultyConfig[] }>('/v1/difficulty-configs', { token });
+}
+
+export function updateDifficulty(token: string, difficulty: Difficulty) {
+  return request<{ message: string; data: { difficulty: Difficulty } }>('/v1/me/difficulty', {
+    method: 'PATCH',
+    token,
+    body: { difficulty },
+  });
+}
+
+export function getExperienceHistory(token: string) {
+  return request<{ message: string; data: ExperienceTransaction[] }>('/v1/me/experience-history', { token });
+}
+
 export function getMissionTemplates(token: string) {
   return request<{ message: string; data: { id: number; title: string; detail: string | null; difficulty: string; duration_minutes: number; reward_xp: number }[] }>('/v1/mission-templates', { token });
 }
@@ -448,7 +483,7 @@ export type GuildMission = {
   creator_id: number;
   title: string;
   detail?: string | null;
-  difficulty: 'easy' | 'medium' | 'hard' | 'epic';
+  difficulty: Difficulty;
   target_progress: number;
   current_progress: number;
   reward_xp: number;
