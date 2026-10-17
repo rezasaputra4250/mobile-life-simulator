@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faBookOpen, faChartSimple, faGaugeHigh, faMedal, faShareNodes, faShieldHalved, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faBookOpen, faChartSimple, faGaugeHigh, faKey, faMedal, faShareNodes, faShieldHalved, faStar, faUserPen } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import type { AffiliateProfile, AuthUser } from '../lib/authApi';
@@ -53,6 +53,12 @@ export function ProfileLanding({
       </View>
 
       <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Pengaturan player</Text>
+      <Link href="/profile-edit" asChild>
+        <ProfileOptionCard icon={faUserPen} label="Edit profil" description="Ubah nama, email, pekerjaan, dan informasi profil." />
+      </Link>
+      <Link href="/change-password" asChild>
+        <ProfileOptionCard icon={faKey} label="Ganti password" description="Perbarui password akun dengan aman." />
+      </Link>
       <Link href="/classes" asChild>
         <ProfileOptionCard icon={faShieldHalved} label="Class" description="Pilih jalur perkembangan karakter." />
       </Link>

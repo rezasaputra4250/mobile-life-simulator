@@ -268,6 +268,30 @@ export function login(email: string, password: string) {
   });
 }
 
+export type ProfileUpdate = {
+  name?: string;
+  email?: string;
+  employee_number?: string | null;
+  position?: string | null;
+  department?: string | null;
+  phone?: string | null;
+  bio?: string | null;
+};
+
+export function updateProfile(token: string, data: ProfileUpdate) {
+  return request<{ message: string }>('/v1/me/profile', {
+    method: 'PATCH', token, body: data,
+  });
+}
+
+export function changePassword(token: string, currentPassword: string, newPassword: string, confirmPassword: string) {
+  return request<{ message: string }>('/v1/me/password', {
+    method: 'PATCH',
+    token,
+    body: { current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword },
+  });
+}
+
 export function register(name: string, email: string, password: string, referralCode?: string) {
   return request<AuthSession>('/auth/register', {
     method: 'POST',
