@@ -88,6 +88,7 @@ export default function ProgressionScreen() {
             </Text>
             <Text className="mt-4 text-base font-black text-[#f5f0e6]">{character.class_label || 'Belum memilih class'}</Text>
             {character.primary_stat ? <Text className="mt-1 text-xs text-[#aaa49a]">Stat utama: {character.primary_stat}</Text> : null}
+            <Text className="mt-1 text-xs font-bold text-[#e7bd68]">Difficulty: {character.difficulty}</Text>
           </View>
 
           <Text className="mb-3 mt-6 text-base font-extrabold text-[#f5f0e6]">Kemampuan</Text>

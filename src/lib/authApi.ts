@@ -349,12 +349,14 @@ export type PlayerClass = {
 
 export type Progression = {
   character: (PlayerClass & {
+    difficulty: Difficulty;
     class_id: number | null;
     class_name: string | null;
     class_label: string | null;
     level: number;
     experience: number;
     experience_to_next_level: number;
+    experience_curve?: { level: number; experience_to_next_level: number }[];
     health_points: number;
     mana_points: number;
     strength: number;

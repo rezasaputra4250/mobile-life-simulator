@@ -1447,10 +1447,13 @@ export default function App() {
     ? missions.filter((mission) => !mission.difficulty || mission.difficulty === activeDifficulty)
     : missions;
   const completedMissions = availableMissions.filter((mission) => mission.completed).length;
-  const userLevel = authUser?.stats?.level ?? authUser?.level ?? 12;
-  const userExperience = authUser?.stats?.experience ?? authUser?.experience ?? 0;
+  const userLevel = progression?.character?.level ?? authUser?.stats?.level ?? authUser?.level ?? 12;
+  const userExperience = progression?.character?.experience ?? authUser?.stats?.experience ?? authUser?.experience ?? 0;
   const nextLevelExperience =
-    authUser?.stats?.experience_to_next_level ?? authUser?.experience_to_next_level ?? 100;
+    progression?.character?.experience_to_next_level
+      ?? authUser?.stats?.experience_to_next_level
+      ?? authUser?.experience_to_next_level
+      ?? 100;
   const levelProgress = getLevelProgress(userExperience, userLevel, nextLevelExperience);
   const activeDifficultyConfig = difficultyConfigs.find((item) => item.difficulty === activeDifficulty);
   const userProfile = authUser?.profile;
