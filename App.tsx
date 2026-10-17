@@ -1128,6 +1128,25 @@ function AuthScreen({
 
 type OnboardingStep = 'difficulty' | 'class';
 
+function onboardingStorageKey(userId: number) {
+  return `rpg_onboarding_completed_${userId}`;
+}
+
+async function hasCompletedOnboarding(userId: number) {
+  const key = onboardingStorageKey(userId);
+  if (Platform.OS === 'web') return window.localStorage.getItem(key) === 'true';
+  return (await SecureStore.getItemAsync(key)) === 'true';
+}
+
+async function markOnboardingCompleted(userId: number) {
+  const key = onboardingStorageKey(userId);
+  if (Platform.OS === 'web') {
+    window.localStorage.setItem(key, 'true');
+  } else {
+    await SecureStore.setItemAsync(key, 'true');
+  }
+}
+
 function getRequiredOnboardingStep(
   user: AuthUser | null | undefined,
   progressionResult: Progression | null | undefined,
@@ -1408,11 +1427,15 @@ export default function App() {
             setAuthSession({ token, user: result.user, message: result.message });
             setAuthUser(result.user);
           }
-          try {
-            const progressionResult = await getProgression(token);
-            if (isMounted) setOnboardingStep(getRequiredOnboardingStep(result.user, progressionResult.data));
-          } catch {
-            // Keep the existing session flow if onboarding status cannot be checked.
+          if (!(await hasCompletedOnboarding(result.user.id))) {
+            try {
+              const progressionResult = await getProgression(token);
+              const requiredStep = getRequiredOnboardingStep(result.user, progressionResult.data);
+              if (isMounted) setOnboardingStep(requiredStep);
+              if (!requiredStep) await markOnboardingCompleted(result.user.id);
+            } catch {
+              // Keep the existing session flow if onboarding status cannot be checked.
+            }
           }
         } catch (error) {
           if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -1632,6 +1655,7 @@ export default function App() {
     const profileResult = await getCurrentUser(authSession.token);
     setAuthUser(profileResult.user);
     setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+    await markOnboardingCompleted(profileResult.user.id);
     setOnboardingStep(null);
   }
 
