@@ -1155,6 +1155,7 @@ export default function App() {
   const [parties, setParties] = useState<Party[]>([]);
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [guildInvitations, setGuildInvitations] = useState<GuildInvitation[]>([]);
+  const [socialView, setSocialView] = useState<'guild' | 'friends'>('guild');
   const [socialSearch, setSocialSearch] = useState('');
   const [socialSearchResults, setSocialSearchResults] = useState<
     Array<{ id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus; incoming_request_id?: number | null }>
@@ -2045,24 +2046,11 @@ export default function App() {
           </>
         ) : activeTab === 'Misi' ? (
           <>
-            <View className="mb-6 flex-row items-start">
-              <View className="flex-1">
-                <Text className="text-2xl font-black text-[#f5f0e6]">Papan Misi</Text>
-                <Text className="mt-2 text-sm leading-5 text-[#929097]">
-                  Selesaikan tantanganmu dan kumpulkan XP untuk naik level.
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Tambah misi"
-                onPress={() => {
-                  setMissionComposerType(null);
-                  setIsMissionComposerOpen(true);
-                }}
-                className="ml-3 h-11 w-11 items-center justify-center rounded-xl border border-[#5a482a] bg-[#2b251a]"
-              >
-                <FontAwesomeIcon icon={faPlus} size={17} color="#e7bd68" />
-              </Pressable>
+            <View className="mb-6">
+              <Text className="text-2xl font-black text-[#f5f0e6]">Papan Misi</Text>
+              <Text className="mt-2 text-sm leading-5 text-[#929097]">
+                Selesaikan tantanganmu dan kumpulkan XP untuk naik level.
+              </Text>
             </View>
 
             <View className="mb-4 flex-row rounded-2xl border border-[#34353d] bg-[#1b1c22] p-1">
@@ -2333,9 +2321,9 @@ export default function App() {
         ) : activeTab === 'Guild' ? (
           <>
             <View className="mb-6">
-              <Text className="text-2xl font-black text-[#f5f0e6]">Guild</Text>
+                <Text className="text-2xl font-black text-[#f5f0e6]">Sosial</Text>
               <Text className="mt-2 text-sm leading-5 text-[#929097]">
-                Temukan teman, terima ajakan, dan bentuk party untuk berpetualang bersama.
+                Kelola guild dan pertemananmu di ruang sosial petualang.
               </Text>
             </View>
 
@@ -2345,6 +2333,24 @@ export default function App() {
               </Text>
             ) : null}
 
+            <View className="mb-6 flex-row rounded-2xl border border-[#34353d] bg-[#1b1c22] p-1">
+              {(['guild', 'friends'] as const).map((view) => (
+                <Pressable
+                  key={view}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: socialView === view }}
+                  onPress={() => setSocialView(view)}
+                  className={`flex-1 rounded-xl px-3 py-3 ${socialView === view ? 'bg-[#342b1b]' : 'bg-transparent'}`}
+                >
+                  <Text className={`text-center text-xs font-black ${socialView === view ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>
+                    {view === 'guild' ? 'Guild' : 'Pertemanan'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {socialView === 'guild' ? (
+              <>
             <View className="mb-6 flex-row items-center justify-between">
               <View>
                 <Text className="text-base font-extrabold text-[#f5f0e6]">Guild saya</Text>
@@ -2495,6 +2501,10 @@ export default function App() {
               </View>
             )}
 
+              </>
+            ) : (
+              <>
+
             <View className="mb-6 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
               <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Cari teman</Text>
               <View className="flex-row gap-2">
@@ -2587,7 +2597,7 @@ export default function App() {
             )}
 
             <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-base font-extrabold text-[#f5f0e6]">Teman guild</Text>
+              <Text className="text-base font-extrabold text-[#f5f0e6]">Teman</Text>
               <Text className="text-xs font-semibold text-[#85838a]">{friends.length} teman</Text>
             </View>
             {friends.length ? (
@@ -2693,6 +2703,8 @@ export default function App() {
               </View>
             ) : (
               <Text className="text-sm text-[#85838a]">Belum ada party. Buat party pertamamu.</Text>
+            )}
+              </>
             )}
           </>
         ) : (
