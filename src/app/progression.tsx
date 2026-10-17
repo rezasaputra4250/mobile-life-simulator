@@ -12,7 +12,11 @@ import {
 function getLevelProgress(totalExperience: number, level: number, nextLevelExperience: number) {
   let experienceSpent = 0;
   for (let currentLevel = 1; currentLevel < Math.max(1, level); currentLevel += 1) {
-    experienceSpent += Math.max(100, Math.round(100 * (1.5 ** (currentLevel - 1))));
+    let requirement = 100;
+    for (let requirementLevel = 1; requirementLevel < currentLevel; requirementLevel += 1) {
+      requirement = Math.round(requirement * 1.5);
+    }
+    experienceSpent += requirement;
   }
 
   const currentExperience = Math.max(0, totalExperience - experienceSpent);
