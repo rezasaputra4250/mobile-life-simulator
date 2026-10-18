@@ -1467,7 +1467,6 @@ export default function App() {
   const [parties, setParties] = useState<Party[]>([]);
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [guildInvitations, setGuildInvitations] = useState<GuildInvitation[]>([]);
-  const [socialView, setSocialView] = useState<'guild' | 'friends'>('guild');
   const [socialSearch, setSocialSearch] = useState('');
   const [socialSearchResults, setSocialSearchResults] = useState<
     Array<{ id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus; incoming_request_id?: number | null }>
@@ -2418,19 +2417,13 @@ export default function App() {
               icon={faUsers}
               label="Guild"
               accessibilityLabel="Buka menu Guild"
-              onPress={() => {
-                setSocialView('guild');
-                setActiveTab('Guild');
-              }}
+              onPress={() => setActiveTab('Guild')}
             />
             <HomeMenuCard
               icon={faUserGroup}
               label="Pertemanan"
               accessibilityLabel="Buka menu Pertemanan"
-              onPress={() => {
-                setSocialView('friends');
-                setActiveTab('Pertemanan');
-              }}
+              onPress={() => setActiveTab('Pertemanan')}
             />
             <HomeMenuCard
               icon={faScroll}
@@ -2823,23 +2816,7 @@ export default function App() {
               </Text>
             ) : null}
 
-            <View className="mb-6 flex-row rounded-2xl border border-[#34353d] bg-[#1b1c22] p-1">
-              {(['guild', 'friends'] as const).map((view) => (
-                <Pressable
-                  key={view}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: socialView === view }}
-                  onPress={() => setSocialView(view)}
-                  className={`flex-1 rounded-xl px-3 py-3 ${socialView === view ? 'bg-[#342b1b]' : 'bg-transparent'}`}
-                >
-                  <Text className={`text-center text-xs font-black ${socialView === view ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>
-                    {view === 'guild' ? 'Guild' : 'Pertemanan'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {socialView === 'guild' ? (
+            {activeTab === 'Guild' ? (
               <>
             <View className="mb-6 flex-row items-center justify-between">
               <View>
