@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
-import { Link, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import type { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -541,10 +541,12 @@ function SkillUnlockModal({
   reward,
   visible,
   onClose,
+  onViewSkills,
 }: {
   reward: MissionReward | null;
   visible: boolean;
   onClose: () => void;
+  onViewSkills: () => void;
 }) {
   if (!reward) return null;
 
@@ -569,13 +571,13 @@ function SkillUnlockModal({
               {reward.description || 'Kemampuan baru telah ditambahkan ke daftar kemampuan aktifmu.'}
             </Text>
             <Text className="mt-3 text-center text-xs font-bold text-[#8cbf9a]">
-              Kemampuan ini sekarang bisa dilihat di Profil Petualang.
+              Kemampuan ini sekarang bisa dilihat di halaman Kemampuan.
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            onPress={onClose}
+            onPress={onViewSkills}
             className="h-12 items-center justify-center rounded-2xl bg-[#e7bd68]"
           >
               <Text className="text-sm font-black text-[#211c12]">Lihat kemampuan saya</Text>
@@ -4088,7 +4090,10 @@ export default function App() {
         visible={Boolean(unlockedSkill)}
         onClose={() => {
           setUnlockedSkill(null);
-          setActiveTab('Profil');
+        }}
+        onViewSkills={() => {
+          setUnlockedSkill(null);
+          router.push('/profile/skills');
         }}
       />
 
