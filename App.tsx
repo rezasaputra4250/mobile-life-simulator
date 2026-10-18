@@ -1458,11 +1458,13 @@ export default function App() {
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>([]);
   const [financeError, setFinanceError] = useState('');
   const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
-  const [financeType, setFinanceType] = useState<'income' | 'expense'>('income');
+  const [financeType, setFinanceType] = useState<'income' | 'expense' | 'transfer'>('income');
   const [financeAmount, setFinanceAmount] = useState('');
   const [financeCategory, setFinanceCategory] = useState('');
   const [financeDescription, setFinanceDescription] = useState('');
   const [financeAccountId, setFinanceAccountId] = useState<number | null>(null);
+  const [financeFromAccountId, setFinanceFromAccountId] = useState<number | null>(null);
+  const [financeToAccountId, setFinanceToAccountId] = useState<number | null>(null);
   const [editingFinanceTransaction, setEditingFinanceTransaction] = useState<FinanceTransaction | null>(null);
   const [isFinanceSaving, setIsFinanceSaving] = useState(false);
   const [financeFormError, setFinanceFormError] = useState('');
@@ -2047,6 +2049,10 @@ export default function App() {
       setFinanceFormError('Kategori transaksi wajib diisi.');
       return;
     }
+    if (financeType === 'transfer' && (!financeFromAccountId || !financeToAccountId || financeFromAccountId === financeToAccountId)) {
+      setFinanceFormError('Pilih akun asal dan tujuan yang berbeda.');
+      return;
+    }
 
     setIsFinanceSaving(true);
     setFinanceFormError('');
@@ -2055,6 +2061,9 @@ export default function App() {
         await updateFinanceTransaction(authSession.token, editingFinanceTransaction.id, {
           type: financeType,
           amount,
+          account_id: financeType === 'transfer' ? financeFromAccountId || undefined : financeAccountId || undefined,
+          from_account_id: financeType === 'transfer' ? financeFromAccountId || undefined : undefined,
+          to_account_id: financeType === 'transfer' ? financeToAccountId || undefined : undefined,
           category: financeCategory.trim(),
           description: financeDescription.trim() || null,
         });
@@ -2066,7 +2075,9 @@ export default function App() {
         await createFinanceTransaction(authSession.token, {
           type: financeType,
           amount,
-          account_id: financeAccountId,
+          account_id: financeType === 'transfer' ? undefined : financeAccountId || undefined,
+          from_account_id: financeType === 'transfer' ? financeFromAccountId || undefined : undefined,
+          to_account_id: financeType === 'transfer' ? financeToAccountId || undefined : undefined,
           category: financeCategory.trim(),
           description: financeDescription.trim() || null,
         });
@@ -2081,6 +2092,8 @@ export default function App() {
       setFinanceCategory('');
       setFinanceDescription('');
       setFinanceAccountId(null);
+      setFinanceFromAccountId(null);
+      setFinanceToAccountId(null);
       setEditingFinanceTransaction(null);
       setIsFinanceModalOpen(false);
     } catch (error) {
@@ -2679,16 +2692,20 @@ export default function App() {
             <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Transaksi terbaru</Text>
             {financeTransactions.length ? financeTransactions.map((transaction) => (
               <View key={transaction.id} className="mb-2 flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
-                <View className={`mr-3 h-9 w-9 items-center justify-center rounded-full ${transaction.type === 'income' ? 'bg-[#243027]' : 'bg-[#321f21]'}`}>
-                  <FontAwesomeIcon icon={transaction.type === 'income' ? faArrowRight : faArrowLeft} size={13} color={transaction.type === 'income' ? '#8cbf9a' : '#f1a39a'} />
+                <View className={`mr-3 h-9 w-9 items-center justify-center rounded-full ${transaction.type === 'income' ? 'bg-[#243027]' : transaction.type === 'transfer' ? 'bg-[#342b1b]' : 'bg-[#321f21]'}`}>
+                  <FontAwesomeIcon icon={transaction.type === 'income' || transaction.type === 'transfer' ? faArrowRight : faArrowLeft} size={13} color={transaction.type === 'income' ? '#8cbf9a' : transaction.type === 'transfer' ? '#e7bd68' : '#f1a39a'} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-sm font-bold text-[#f1ede4]">{transaction.category}</Text>
-                  <Text className="mt-1 text-xs text-[#85838a]">{transaction.account_name || 'Akun keuangan'} · {transaction.description || 'Transaksi keuangan'}</Text>
+                  <Text className="mt-1 text-xs text-[#85838a]">
+                    {transaction.type === 'transfer'
+                      ? `${transaction.from_account_name || 'Akun asal'} → ${transaction.to_account_name || 'Akun tujuan'}`
+                      : `${transaction.account_name || 'Akun keuangan'} · ${transaction.description || 'Transaksi keuangan'}`}
+                  </Text>
                 </View>
                 <View className="items-end">
-                  <Text className={`text-xs font-black ${transaction.type === 'income' ? 'text-[#8cbf9a]' : 'text-[#f1a39a]'}`}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                  <Text className={`text-xs font-black ${transaction.type === 'income' ? 'text-[#8cbf9a]' : transaction.type === 'transfer' ? 'text-[#e7bd68]' : 'text-[#f1a39a]'}`}>
+                    {transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '↔ ' : '-'}{formatCurrency(transaction.amount)}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -2696,6 +2713,9 @@ export default function App() {
                       setEditingFinanceTransaction(transaction);
                       setFinanceType(transaction.type);
                       setFinanceAmount(String(transaction.amount));
+                      setFinanceAccountId(transaction.account_id || null);
+                      setFinanceFromAccountId(transaction.from_account_id || null);
+                      setFinanceToAccountId(transaction.to_account_id || null);
                       setFinanceCategory(transaction.category);
                       setFinanceDescription(transaction.description || '');
                       setFinanceFormError('');
@@ -3519,6 +3539,8 @@ export default function App() {
             setFinanceFormError('');
             setFinanceType('income');
             setFinanceAccountId(finance?.accounts[0]?.id ?? null);
+            setFinanceFromAccountId(finance?.accounts[0]?.id ?? null);
+            setFinanceToAccountId(finance?.accounts[1]?.id ?? null);
             setIsFinanceModalOpen(true);
           }}
           className="absolute bottom-[78px] right-5 h-14 w-14 items-center justify-center rounded-full border-2 border-[#f5d98e] bg-[#e7bd68] shadow-lg"
@@ -3746,7 +3768,7 @@ export default function App() {
             </View>
 
             <View className="mb-4 flex-row gap-2">
-              {(['income', 'expense'] as const).map((type) => (
+              {(['income', 'expense', 'transfer'] as const).map((type) => (
                 <Pressable
                   key={type}
                   accessibilityRole="radio"
@@ -3755,24 +3777,40 @@ export default function App() {
                   className={`flex-1 items-center rounded-xl border px-3 py-3 ${financeType === type ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#121318]'}`}
                 >
                   <Text className={`text-xs font-black ${financeType === type ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>
-                    {type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                    {type === 'income' ? 'Pemasukan' : type === 'expense' ? 'Pengeluaran' : 'Transfer'}
                   </Text>
                 </Pressable>
               ))}
             </View>
-            {!editingFinanceTransaction ? (
+            <View className="mb-3">
+              <Text className="mb-2 text-[10px] font-black uppercase tracking-[1px]">{financeType === 'transfer' ? 'Dari akun' : 'Akun transaksi'}</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {(finance?.accounts ?? []).map((account) => (
+                  <Pressable
+                    key={account.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: financeType === 'transfer' ? financeFromAccountId === account.id : financeAccountId === account.id }}
+                    onPress={() => financeType === 'transfer' ? setFinanceFromAccountId(account.id) : setFinanceAccountId(account.id)}
+                    className={`rounded-xl border px-3 py-2.5 ${(financeType === 'transfer' ? financeFromAccountId === account.id : financeAccountId === account.id) ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#121318]'}`}
+                  >
+                    <Text className={`text-xs font-bold ${(financeType === 'transfer' ? financeFromAccountId === account.id : financeAccountId === account.id) ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>{account.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            {financeType === 'transfer' ? (
               <View className="mb-3">
-                <Text className="mb-2 text-[10px] font-black uppercase tracking-[1px] text-[#9c927e]">Akun transaksi</Text>
+                <Text className="mb-2 text-[10px] font-black uppercase tracking-[1px]">Ke akun</Text>
                 <View className="flex-row flex-wrap gap-2">
                   {(finance?.accounts ?? []).map((account) => (
                     <Pressable
                       key={account.id}
                       accessibilityRole="radio"
-                      accessibilityState={{ selected: financeAccountId === account.id }}
-                      onPress={() => setFinanceAccountId(account.id)}
-                      className={`rounded-xl border px-3 py-2.5 ${financeAccountId === account.id ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#121318]'}`}
+                      accessibilityState={{ selected: financeToAccountId === account.id }}
+                      onPress={() => setFinanceToAccountId(account.id)}
+                      className={`rounded-xl border px-3 py-2.5 ${financeToAccountId === account.id ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#121318]'}`}
                     >
-                      <Text className={`text-xs font-bold ${financeAccountId === account.id ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>{account.name}</Text>
+                      <Text className={`text-xs font-bold ${financeToAccountId === account.id ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>{account.name}</Text>
                     </Pressable>
                   ))}
                 </View>

@@ -148,7 +148,11 @@ export type FinanceTransaction = {
   id: number;
   account_id?: number;
   account_name?: string | null;
-  type: 'income' | 'expense';
+  from_account_id?: number | null;
+  from_account_name?: string | null;
+  to_account_id?: number | null;
+  to_account_name?: string | null;
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   balance_after: number;
   category: string;
@@ -484,7 +488,7 @@ export function getFinanceTransactions(token: string, limit = 10) {
 
 export function createFinanceTransaction(
   token: string,
-  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { account_id: number; occurred_at?: string },
+  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { account_id?: number; from_account_id?: number; to_account_id?: number; occurred_at?: string },
 ) {
   return request<{
     message: string;
@@ -496,7 +500,7 @@ export function createFinanceTransaction(
 export function updateFinanceTransaction(
   token: string,
   transactionId: number,
-  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { occurred_at?: string },
+  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { account_id?: number; from_account_id?: number; to_account_id?: number; occurred_at?: string },
 ) {
   return request<{ message: string; wallet: FinanceWallet }>(`/finance/transactions/${transactionId}`, {
     method: 'PATCH',
