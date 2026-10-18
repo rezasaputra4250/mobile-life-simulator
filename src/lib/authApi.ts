@@ -1,6 +1,7 @@
 import axios, { isAxiosError } from 'axios';
 import { showErrorModal } from './errorModal';
 import Constants from 'expo-constants';
+import type { Religion } from '../constants/religions';
 
 export type AuthUser = {
   id: number;
@@ -20,6 +21,7 @@ export type AuthUser = {
     position?: string | null;
     department?: string | null;
     phone?: string | null;
+    religion?: Religion | null;
     avatar_url?: string | null;
     city?: string | null;
     province?: string | null;
@@ -320,6 +322,7 @@ export type ProfileUpdate = {
   position?: string | null;
   department?: string | null;
   phone?: string | null;
+  religion?: Religion | null;
   bio?: string | null;
 };
 
