@@ -1,30 +1,31 @@
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { changePassword } from '../lib/authApi';
 import { getSessionToken } from '../lib/session';
+import { showFeedbackModal } from '../lib/errorModal';
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   async function save() {
-    if (newPassword.length < 8) return setMessage('Password baru minimal 8 karakter.');
-    if (newPassword !== confirmPassword) return setMessage('Konfirmasi password tidak sama.');
+    if (newPassword.length < 8) return showFeedbackModal('Password baru minimal 8 karakter.', 'error');
+    if (newPassword !== confirmPassword) return showFeedbackModal('Konfirmasi password tidak sama.', 'error');
     const token = await getSessionToken();
-    if (!token) return setMessage('Sesi login tidak ditemukan.');
+    if (!token) return showFeedbackModal('Sesi login tidak ditemukan.', 'error');
     setIsSaving(true);
-    setMessage('');
     try {
       const result = await changePassword(token, currentPassword, newPassword, confirmPassword);
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-      setMessage(result.message);
+      showFeedbackModal(result.message, 'success');
+      router.back();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Password belum dapat diubah.');
+      showFeedbackModal(error instanceof Error ? error.message : 'Password belum dapat diubah.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -43,7 +44,6 @@ export default function ChangePasswordScreen() {
       <Pressable onPress={() => void save()} disabled={isSaving} className="mt-5 items-center rounded-xl bg-[#e7bd68] px-4 py-3">
         <Text className="font-black text-[#211c12]">{isSaving ? 'Menyimpan...' : 'Simpan password'}</Text>
       </Pressable>
-      {message ? <Text className="mt-4 text-sm font-bold text-[#f1a39a]">{message}</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
