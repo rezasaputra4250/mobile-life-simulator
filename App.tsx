@@ -59,6 +59,7 @@ import {
   getInventory,
   getFinanceSummary,
   getFinanceTransactions,
+  createFinanceTransaction,
   getDifficultyConfigs,
   getExperienceHistory,
   getProgression,
@@ -1448,6 +1449,13 @@ export default function App() {
   const [finance, setFinance] = useState<FinanceSummary | null>(null);
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>([]);
   const [financeError, setFinanceError] = useState('');
+  const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
+  const [financeType, setFinanceType] = useState<'income' | 'expense'>('income');
+  const [financeAmount, setFinanceAmount] = useState('');
+  const [financeCategory, setFinanceCategory] = useState('');
+  const [financeDescription, setFinanceDescription] = useState('');
+  const [isFinanceSaving, setIsFinanceSaving] = useState(false);
+  const [financeFormError, setFinanceFormError] = useState('');
   const [affiliateProfile, setAffiliateProfile] = useState<AffiliateProfile | null>(null);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [todoTitle, setTodoTitle] = useState('');
@@ -2017,6 +2025,44 @@ export default function App() {
     setParties(partiesResult.parties);
     setGuilds(guildsResult.guilds);
     setGuildInvitations(guildsResult.invitations);
+  }
+
+  async function handleCreateFinanceTransaction() {
+    if (!authSession) return;
+    const amount = Number(financeAmount.replace(/[^0-9]/g, ''));
+    if (!amount || amount < 1) {
+      setFinanceFormError('Masukkan nominal transaksi yang valid.');
+      return;
+    }
+    if (!financeCategory.trim()) {
+      setFinanceFormError('Kategori transaksi wajib diisi.');
+      return;
+    }
+
+    setIsFinanceSaving(true);
+    setFinanceFormError('');
+    try {
+      await createFinanceTransaction(authSession.token, {
+        type: financeType,
+        amount,
+        category: financeCategory.trim(),
+        description: financeDescription.trim() || null,
+      });
+      const [summaryResult, transactionsResult] = await Promise.all([
+        getFinanceSummary(authSession.token),
+        getFinanceTransactions(authSession.token),
+      ]);
+      setFinance(summaryResult);
+      setFinanceTransactions(transactionsResult.transactions);
+      setFinanceAmount('');
+      setFinanceCategory('');
+      setFinanceDescription('');
+      setIsFinanceModalOpen(false);
+    } catch (error) {
+      setFinanceFormError(error instanceof Error ? error.message : 'Transaksi belum dapat disimpan.');
+    } finally {
+      setIsFinanceSaving(false);
+    }
   }
 
   async function handleSocialSearch() {
@@ -3427,6 +3473,20 @@ export default function App() {
         </Pressable>
       ) : null}
 
+      {activeTab === 'Dompet' && authSession ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tambah transaksi keuangan"
+          onPress={() => {
+            setFinanceFormError('');
+            setIsFinanceModalOpen(true);
+          }}
+          className="absolute bottom-[78px] right-5 h-14 w-14 items-center justify-center rounded-full border-2 border-[#f5d98e] bg-[#e7bd68] shadow-lg"
+        >
+          <FontAwesomeIcon icon={faPlus} size={22} color="#211c12" />
+        </Pressable>
+      ) : null}
+
       <Modal
         visible={isMissionComposerOpen}
         transparent
@@ -3615,6 +3675,84 @@ export default function App() {
                 )}
               </ScrollView>
             )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={isFinanceModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsFinanceModalOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <View className="rounded-t-[28px] border-t border-[#5a482a] bg-[#242118] px-5 pb-8 pt-5">
+            <View className="mb-5 flex-row items-center">
+              <View className="flex-1">
+                <Text className="text-xl font-black text-[#f5f0e6]">Tambah transaksi</Text>
+                <Text className="mt-1 text-xs text-[#aaa49a]">Catat pemasukan atau pengeluaran dompetmu.</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tutup modal transaksi"
+                onPress={() => setIsFinanceModalOpen(false)}
+                className="h-9 w-9 items-center justify-center rounded-full bg-[#342b1b]"
+              >
+                <Text className="text-lg font-bold text-[#e7bd68]">×</Text>
+              </Pressable>
+            </View>
+
+            <View className="mb-4 flex-row gap-2">
+              {(['income', 'expense'] as const).map((type) => (
+                <Pressable
+                  key={type}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: financeType === type }}
+                  onPress={() => setFinanceType(type)}
+                  className={`flex-1 items-center rounded-xl border px-3 py-3 ${financeType === type ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#121318]'}`}
+                >
+                  <Text className={`text-xs font-black ${financeType === type ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>
+                    {type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              value={financeAmount}
+              onChangeText={setFinanceAmount}
+              placeholder="Nominal, contoh 50000"
+              placeholderTextColor="#77757d"
+              keyboardType="number-pad"
+              className="h-12 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+            />
+            <TextInput
+              value={financeCategory}
+              onChangeText={setFinanceCategory}
+              placeholder="Kategori, contoh Gaji atau Makan"
+              placeholderTextColor="#77757d"
+              className="mt-3 h-12 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+            />
+            <TextInput
+              value={financeDescription}
+              onChangeText={setFinanceDescription}
+              placeholder="Catatan (opsional)"
+              placeholderTextColor="#77757d"
+              multiline
+              textAlignVertical="top"
+              className="mt-3 min-h-[70px] rounded-xl border border-[#34353d] bg-[#121318] px-3 py-3 text-sm text-[#f5f0e6]"
+            />
+            {financeFormError ? <Text className="mt-3 text-xs text-[#f1a39a]">{financeFormError}</Text> : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={isFinanceSaving}
+              onPress={() => void handleCreateFinanceTransaction()}
+              className={`mt-4 items-center rounded-xl py-3 ${isFinanceSaving ? 'bg-[#8e7545]' : 'bg-[#e7bd68]'}`}
+            >
+              <Text className="text-xs font-black text-[#211c12]">{isFinanceSaving ? 'Menyimpan...' : 'Simpan transaksi'}</Text>
+            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>

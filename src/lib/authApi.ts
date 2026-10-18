@@ -470,6 +470,17 @@ export function getFinanceTransactions(token: string, limit = 10) {
   return request<{ message: string; transactions: FinanceTransaction[] }>(`/finance/transactions?limit=${limit}`, { token });
 }
 
+export function createFinanceTransaction(
+  token: string,
+  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { occurred_at?: string },
+) {
+  return request<{
+    message: string;
+    transaction: FinanceTransaction;
+    wallet: FinanceWallet;
+  }>('/finance/transactions', { method: 'POST', token, body: data });
+}
+
 export function getTodos(token: string) {
   return request<{ message: string; todos: Todo[] }>('/todos', { token });
 }
