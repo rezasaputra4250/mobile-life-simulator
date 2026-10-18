@@ -85,6 +85,7 @@ cp .env.example .env
 
 Atur nilai berikut sesuai environment lokal:
 
+- `EXPO_PUBLIC_APP_ENV` — pilih `local`, `development`, `staging`, atau `production`.
 - `EXPO_PUBLIC_API_URL` — URL dasar backend. Kosongkan untuk memakai alamat host Expo saat development.
 - `EXPO_PUBLIC_API_PORT` — port backend, default `5000`.
 - `EXPO_PUBLIC_API_DEBUG` — gunakan `true` hanya saat membutuhkan log API tambahan.
@@ -92,6 +93,15 @@ Atur nilai berikut sesuai environment lokal:
 Untuk perangkat fisik, komputer dan perangkat harus berada pada jaringan Wi-Fi yang sama. Jika backend berjalan di komputer host, gunakan alamat IP LAN komputer tersebut bila alamat otomatis Expo tidak dapat diakses.
 
 Jangan commit file `.env` atau credential asli.
+
+Pemetaan environment aplikasi:
+
+| Environment | Branch backend/mobile | `EXPO_PUBLIC_APP_ENV` |
+| --- | --- | --- |
+| Local developer | `local` | `local` |
+| Development | `develop` | `development` |
+| Staging | `staging` | `staging` |
+| Production | `main` | `production` |
 
 ### 5. Jalankan pemeriksaan
 
