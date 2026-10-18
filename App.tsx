@@ -269,12 +269,14 @@ function PickerField({
   label,
   value,
   mode,
+  icon,
   placeholder,
   onChange,
 }: {
   label: string;
   value: Date;
   mode: 'date' | 'time';
+  icon?: IconProp;
   placeholder?: string;
   onChange: (value: Date) => void;
 }) {
@@ -285,11 +287,14 @@ function PickerField({
     <>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={label}
         onPress={() => setVisible(true)}
-        className="h-11 justify-center rounded-xl border border-[#34353d] bg-[#121318] px-3"
+        className={`border border-[#34343a] bg-[#1b1c22] ${icon ? 'h-14 flex-row items-center rounded-2xl px-4' : 'h-11 justify-center rounded-xl px-3'}`}
       >
-        <Text className="text-[9px] font-bold uppercase tracking-[1px] text-[#9c927e]">{label}</Text>
-        <Text className="mt-0.5 text-sm text-[#f5f0e6]">{displayValue}</Text>
+        {icon ? <FontAwesomeIcon icon={icon} size={16} color="#918d84" /> : null}
+        <Text className={icon ? 'ml-3 flex-1 text-sm text-[#f5f0e6]' : 'text-sm text-[#f5f0e6]'}>
+          {displayValue}
+        </Text>
       </Pressable>
       {visible ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setVisible(false)}>
@@ -997,6 +1002,7 @@ function AuthScreen({
                     label="Tanggal lahir"
                     value={birthDate ? parseDateValue(birthDate) : new Date(2000, 0, 1)}
                     mode="date"
+                    icon={faCalendarCheck}
                     placeholder={birthDate ? undefined : 'Pilih tanggal lahir'}
                     onChange={(value) => setBirthDate(formatDateValue(value))}
                   />
