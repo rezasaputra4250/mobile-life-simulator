@@ -1242,12 +1242,6 @@ function onboardingStorageKey(userId: number) {
   return `rpg_onboarding_completed_${userId}`;
 }
 
-async function hasCompletedOnboarding(userId: number) {
-  const key = onboardingStorageKey(userId);
-  if (Platform.OS === 'web') return window.localStorage.getItem(key) === 'true';
-  return (await SecureStore.getItemAsync(key)) === 'true';
-}
-
 async function markOnboardingCompleted(userId: number) {
   const key = onboardingStorageKey(userId);
   if (Platform.OS === 'web') {
@@ -1572,15 +1566,13 @@ export default function App() {
             setAuthSession({ token, user: result.user, message: result.message });
             setAuthUser(result.user);
           }
-          if (!(await hasCompletedOnboarding(result.user.id))) {
-            try {
-              const progressionResult = await getProgression(token);
-              const requiredStep = getRequiredOnboardingStep(result.user, progressionResult.data);
-              if (isMounted) setOnboardingStep(requiredStep);
-              if (!requiredStep) await markOnboardingCompleted(result.user.id);
-            } catch {
-              // Keep the existing session flow if onboarding status cannot be checked.
-            }
+          try {
+            const progressionResult = await getProgression(token);
+            const requiredStep = getRequiredOnboardingStep(result.user, progressionResult.data);
+            if (isMounted) setOnboardingStep(requiredStep);
+            if (!requiredStep) await markOnboardingCompleted(result.user.id);
+          } catch {
+            // Keep the existing session flow if onboarding status cannot be checked.
           }
         } catch (error) {
           if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -1831,10 +1823,6 @@ export default function App() {
     setAuthUser(session.user);
     setIsGuest(false);
     setAuthError('');
-    if (await hasCompletedOnboarding(session.user.id)) {
-      setOnboardingStep(null);
-      return;
-    }
     try {
       const progressionResult = await getProgression(session.token);
       const requiredStep = getRequiredOnboardingStep(session.user, progressionResult.data);
