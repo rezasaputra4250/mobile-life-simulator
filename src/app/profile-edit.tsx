@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { faCheck } from '@fortawesome/free-solid-svg-icons';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -70,7 +71,13 @@ export default function ProfileEditScreen() {
   return (
     <SafeAreaView className="flex-1 bg-[#17181d]" edges={['top', 'left', 'right', 'bottom']}>
       <ScrollView className="flex-1 px-5 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
-      <ProfilePageHeader title="Edit profil" subtitle="Perbarui informasi dasar akun dan profilmu." />
+      <ProfilePageHeader
+        title="Edit profil"
+        subtitle="Perbarui informasi dasar akun dan profilmu."
+        rightIcon={faCheck}
+        rightAccessibilityLabel="Simpan perubahan profil"
+        onRightPress={() => void save()}
+      />
       {fields.map(({ label, value, onChange }) => (
         <View key={String(label)} className="mt-4">
           <Text className="mb-2 text-xs font-bold uppercase tracking-[1px] text-[#aaa49a]">{label}</Text>
