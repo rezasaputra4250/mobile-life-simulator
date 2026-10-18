@@ -1009,12 +1009,10 @@ function AuthScreen({
                     onChange={(value) => setBirthDate(formatDateValue(value))}
                   />
                 </View>
-                <Text className="mb-2 mt-1 text-[10px] font-black uppercase tracking-[1px] text-[#9c927e]">Jenis kelamin</Text>
                 <View className="mb-3 flex-row gap-2">
                   {([
                     ['male', 'Laki-laki'],
                     ['female', 'Perempuan'],
-                    ['other', 'Lainnya'],
                   ] as const).map(([value, label]) => (
                     <Pressable
                       key={value}
