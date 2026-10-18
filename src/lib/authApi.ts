@@ -592,6 +592,18 @@ export type Guild = {
   member_count?: number;
   members?: GuildMember[];
   missions?: GuildMission[];
+  owner_name?: string;
+  is_member?: number;
+  has_pending_request?: number;
+};
+
+export type GuildJoinRequest = {
+  id: number;
+  guild_id: number;
+  requester_id: number;
+  requester_name: string;
+  requester_email: string;
+  created_at: string;
 };
 
 export type GuildMission = {
@@ -678,7 +690,7 @@ export function removePartyMember(token: string, partyId: number, userId: number
 }
 
 export function getGuilds(token: string) {
-  return request<{ message: string; guilds: Guild[]; invitations: GuildInvitation[] }>('/guilds', { token });
+  return request<{ message: string; guilds: Guild[]; invitations: GuildInvitation[]; join_requests: GuildJoinRequest[] }>('/guilds', { token });
 }
 
 export function searchGuilds(token: string, query: string) {
@@ -698,6 +710,18 @@ export function updateGuild(token: string, guildId: number, data: { name: string
     method: 'PATCH',
     token,
     body: data,
+  });
+}
+
+export function requestGuildJoin(token: string, guildId: number) {
+  return request<{ message: string }>(`/guilds/${guildId}/join-requests`, { method: 'POST', token });
+}
+
+export function respondGuildJoinRequest(token: string, requestId: number, action: 'accept' | 'reject') {
+  return request<{ message: string }>(`/guilds/join-requests/${requestId}`, {
+    method: 'PATCH',
+    token,
+    body: { action },
   });
 }
 

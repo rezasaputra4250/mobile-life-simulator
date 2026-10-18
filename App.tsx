@@ -54,6 +54,8 @@ import {
   getClasses,
   getGuilds,
   searchGuilds,
+  requestGuildJoin,
+  respondGuildJoinRequest,
   createGuildMission,
   contributeGuildMission,
   getFriends,
@@ -104,6 +106,7 @@ import {
   type Party,
   type Guild,
   type GuildInvitation,
+  type GuildJoinRequest,
   type AffiliateProfile,
   type Todo,
   type Difficulty,
@@ -1481,6 +1484,7 @@ export default function App() {
   const [parties, setParties] = useState<Party[]>([]);
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [guildInvitations, setGuildInvitations] = useState<GuildInvitation[]>([]);
+  const [guildJoinRequests, setGuildJoinRequests] = useState<GuildJoinRequest[]>([]);
   const [socialSearch, setSocialSearch] = useState('');
   const [socialSearchResults, setSocialSearchResults] = useState<
     Array<{ id: number; name: string; email: string; relationship_status?: FriendRelationshipStatus; incoming_request_id?: number | null }>
@@ -1766,6 +1770,7 @@ export default function App() {
           setParties(partiesResult.parties);
           setGuilds(guildsResult.guilds);
           setGuildInvitations(guildsResult.invitations);
+          setGuildJoinRequests(guildsResult.join_requests || []);
           setSocialError('');
         }
       } catch (error) {
@@ -2044,6 +2049,7 @@ export default function App() {
     setParties(partiesResult.parties);
     setGuilds(guildsResult.guilds);
     setGuildInvitations(guildsResult.invitations);
+    setGuildJoinRequests(guildsResult.join_requests || []);
   }
 
   async function handleCreateFinanceTransaction() {
@@ -2199,6 +2205,30 @@ export default function App() {
       setSocialError('');
     } catch (error) {
       setSocialError(error instanceof Error ? error.message : 'Pencarian guild gagal.');
+    }
+  }
+
+  async function handleRequestGuildJoin(guildId: number) {
+    if (!authSession) return;
+    try {
+      await requestGuildJoin(authSession.token, guildId);
+      setGuildSearchResults((results) => results.map((guild) => (
+        guild.id === guildId ? { ...guild, has_pending_request: 1 } : guild
+      )));
+      setSocialError('Permintaan bergabung berhasil dikirim.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Permintaan bergabung gagal dikirim.');
+    }
+  }
+
+  async function handleGuildJoinRequest(requestId: number, action: 'accept' | 'reject') {
+    if (!authSession) return;
+    try {
+      await respondGuildJoinRequest(authSession.token, requestId, action);
+      await refreshSocial();
+      setSocialError(action === 'accept' ? 'Permintaan bergabung disetujui.' : 'Permintaan bergabung ditolak.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Permintaan bergabung gagal diproses.');
     }
   }
 
@@ -2977,6 +3007,16 @@ export default function App() {
                           <Text className="text-sm font-bold text-[#f1ede4]">{result.name}</Text>
                           <Text className="mt-1 text-xs text-[#85838a]">{result.member_count ?? 0}/{result.max_members} anggota</Text>
                         </View>
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={Boolean(result.is_member) || Boolean(result.has_pending_request) || result.owner_id === authUser?.id}
+                          onPress={() => void handleRequestGuildJoin(result.id)}
+                          className={`rounded-lg border px-2.5 py-2 ${result.is_member || result.has_pending_request || result.owner_id === authUser?.id ? 'border-[#34353d] bg-[#1b1c22]' : 'border-[#66522c] bg-[#342b1b]'}`}
+                        >
+                          <Text className={`text-[10px] font-black ${result.is_member || result.has_pending_request || result.owner_id === authUser?.id ? 'text-[#85838a]' : 'text-[#e7bd68]'}`}>
+                            {result.is_member ? 'Sudah gabung' : result.has_pending_request ? 'Terkirim' : result.owner_id === authUser?.id ? 'Pemilik' : 'Minta gabung'}
+                          </Text>
+                        </Pressable>
                       </View>
                       {result.description ? <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">{result.description}</Text> : null}
                     </View>
@@ -3023,6 +3063,36 @@ export default function App() {
                 >
                   <Text className="text-xs font-black text-[#211c12]">Simpan guild</Text>
                 </Pressable>
+              </View>
+            ) : null}
+
+            {guildJoinRequests.length ? (
+              <View className="mb-6">
+                <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Permintaan bergabung</Text>
+                <View className="gap-3">
+                  {guildJoinRequests.map((request) => (
+                    <View key={request.id} className="rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
+                      <Text className="text-sm font-bold text-[#f1ede4]">{request.requester_name}</Text>
+                      <Text className="mt-1 text-xs text-[#aaa49a]">Ingin bergabung ke guild kamu · {request.requester_email}</Text>
+                      <View className="mt-3 flex-row gap-2">
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleGuildJoinRequest(request.id, 'accept')}
+                          className="flex-1 items-center rounded-xl bg-[#8cbf9a] py-2.5"
+                        >
+                          <Text className="text-xs font-black text-[#15251a]">Setujui</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => void handleGuildJoinRequest(request.id, 'reject')}
+                          className="flex-1 items-center rounded-xl border border-[#793e3e] bg-[#321f21] py-2.5"
+                        >
+                          <Text className="text-xs font-black text-[#f1a39a]">Tolak</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </View>
               </View>
             ) : null}
 
