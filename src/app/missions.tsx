@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createCustomMission } from '../lib/authApi';
 import { getSessionToken } from '../lib/session';
+import { showFeedbackModal } from '../lib/errorModal';
 
 export default function MissionCreateScreen() {
   const [title, setTitle] = useState('');
   const [detail, setDetail] = useState('');
   const [missionDate, setMissionDate] = useState(getLocalDate());
-  const [message, setMessage] = useState('');
 
   async function submit() {
     const token = await getSessionToken();
-    if (!token || !title.trim()) { setMessage('Judul misi wajib diisi.'); return; }
+    if (!token || !title.trim()) { showFeedbackModal('Judul misi wajib diisi.', 'error'); return; }
     try {
       await createCustomMission(token, {
         title: title.trim(),
@@ -23,14 +23,17 @@ export default function MissionCreateScreen() {
       setTitle('');
       setDetail('');
       setMissionDate(getLocalDate());
-      setMessage('Misi berhasil dibuat dan masuk kategori Pribadi.');
+      showFeedbackModal('Misi berhasil dibuat dan masuk kategori Pribadi.', 'success');
+      router.back();
     }
-    catch (error) { setMessage(error instanceof Error ? error.message : 'Misi gagal dibuat.'); }
+    catch (error) { showFeedbackModal(error instanceof Error ? error.message : 'Misi gagal dibuat.', 'error'); }
   }
 
   return (
     <SafeAreaView className="flex-1 bg-[#17181d] px-5 pt-8" edges={['top', 'left', 'right', 'bottom']}>
-      <Link href="/" asChild><Pressable><Text className="mb-6 text-sm font-bold text-[#e7bd68]">← Kembali</Text></Pressable></Link>
+      <Pressable accessibilityRole="button" accessibilityLabel="Tutup form misi" onPress={() => router.back()}>
+        <Text className="mb-6 text-sm font-bold text-[#e7bd68]">Tutup</Text>
+      </Pressable>
       <Text className="text-3xl font-black text-[#f5f0e6]">Misi baru</Text>
       <Text className="mt-2 text-sm leading-6 text-[#aaa49a]">Ubah pekerjaan nyata menjadi progress karakter.</Text>
       <TextInput value={title} onChangeText={setTitle} placeholder="Contoh: Selesaikan laporan" placeholderTextColor="#77757d" className="mt-6 rounded-xl border border-[#5a482a] bg-[#242118] px-4 py-3 text-[#f5f0e6]" />
@@ -43,7 +46,6 @@ export default function MissionCreateScreen() {
         <Text className="mt-1 text-xs text-[#aaa49a]">Ubah difficulty dari Profil untuk mission baru berikutnya.</Text>
       </View>
       <Pressable onPress={() => void submit()} className="mt-4 items-center rounded-xl bg-[#e7bd68] px-4 py-3"><Text className="font-black text-[#211c12]">Buat misi</Text></Pressable>
-      {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
     </SafeAreaView>
   );
 }
