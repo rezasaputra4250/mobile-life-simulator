@@ -60,6 +60,7 @@ import {
   getFinanceSummary,
   getFinanceTransactions,
   createFinanceTransaction,
+  updateFinanceTransaction,
   getDifficultyConfigs,
   getExperienceHistory,
   getProgression,
@@ -1454,6 +1455,8 @@ export default function App() {
   const [financeAmount, setFinanceAmount] = useState('');
   const [financeCategory, setFinanceCategory] = useState('');
   const [financeDescription, setFinanceDescription] = useState('');
+  const [financeAccountId, setFinanceAccountId] = useState<number | null>(null);
+  const [editingFinanceTransaction, setEditingFinanceTransaction] = useState<FinanceTransaction | null>(null);
   const [isFinanceSaving, setIsFinanceSaving] = useState(false);
   const [financeFormError, setFinanceFormError] = useState('');
   const [affiliateProfile, setAffiliateProfile] = useState<AffiliateProfile | null>(null);
@@ -2041,12 +2044,26 @@ export default function App() {
     setIsFinanceSaving(true);
     setFinanceFormError('');
     try {
-      await createFinanceTransaction(authSession.token, {
-        type: financeType,
-        amount,
-        category: financeCategory.trim(),
-        description: financeDescription.trim() || null,
-      });
+      if (editingFinanceTransaction) {
+        await updateFinanceTransaction(authSession.token, editingFinanceTransaction.id, {
+          type: financeType,
+          amount,
+          category: financeCategory.trim(),
+          description: financeDescription.trim() || null,
+        });
+      } else {
+        if (!financeAccountId) {
+          setFinanceFormError('Pilih akun transaksi terlebih dahulu.');
+          return;
+        }
+        await createFinanceTransaction(authSession.token, {
+          type: financeType,
+          amount,
+          account_id: financeAccountId,
+          category: financeCategory.trim(),
+          description: financeDescription.trim() || null,
+        });
+      }
       const [summaryResult, transactionsResult] = await Promise.all([
         getFinanceSummary(authSession.token),
         getFinanceTransactions(authSession.token),
@@ -2056,6 +2073,8 @@ export default function App() {
       setFinanceAmount('');
       setFinanceCategory('');
       setFinanceDescription('');
+      setFinanceAccountId(null);
+      setEditingFinanceTransaction(null);
       setIsFinanceModalOpen(false);
     } catch (error) {
       setFinanceFormError(error instanceof Error ? error.message : 'Transaksi belum dapat disimpan.');
@@ -2633,6 +2652,23 @@ export default function App() {
                 <Text className="mt-2 text-sm font-black text-[#f5d5d0]">{formatCurrency(finance?.totals.total_expense ?? 0)}</Text>
               </View>
             </View>
+            <View className="mb-6">
+              <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Akun keuangan</Text>
+              <View className="gap-2">
+                {(finance?.accounts ?? []).map((account) => (
+                  <View key={account.id} className="flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+                    <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-[#342b1b]">
+                      <FontAwesomeIcon icon={faWallet} size={16} color="#e7bd68" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-[#f1ede4]">{account.name}</Text>
+                      <Text className="mt-1 text-xs text-[#85838a]">{account.type === 'e_wallet' ? 'E-Wallet' : account.type === 'bank' ? 'Bank' : account.type === 'cash' ? 'Kas' : 'Lainnya'}</Text>
+                    </View>
+                    <Text className="text-sm font-black text-[#e7bd68]">{formatCurrency(account.balance, account.currency)}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
             <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Transaksi terbaru</Text>
             {financeTransactions.length ? financeTransactions.map((transaction) => (
               <View key={transaction.id} className="mb-2 flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
@@ -2641,11 +2677,28 @@ export default function App() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-sm font-bold text-[#f1ede4]">{transaction.category}</Text>
-                  <Text className="mt-1 text-xs text-[#85838a]">{transaction.description || 'Transaksi keuangan'}</Text>
+                  <Text className="mt-1 text-xs text-[#85838a]">{transaction.account_name || 'Akun keuangan'} · {transaction.description || 'Transaksi keuangan'}</Text>
                 </View>
-                <Text className={`text-xs font-black ${transaction.type === 'income' ? 'text-[#8cbf9a]' : 'text-[#f1a39a]'}`}>
-                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                </Text>
+                <View className="items-end">
+                  <Text className={`text-xs font-black ${transaction.type === 'income' ? 'text-[#8cbf9a]' : 'text-[#f1a39a]'}`}>
+                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setEditingFinanceTransaction(transaction);
+                      setFinanceType(transaction.type);
+                      setFinanceAmount(String(transaction.amount));
+                      setFinanceCategory(transaction.category);
+                      setFinanceDescription(transaction.description || '');
+                      setFinanceFormError('');
+                      setIsFinanceModalOpen(true);
+                    }}
+                    className="mt-2 rounded-lg px-1 py-0.5"
+                  >
+                    <Text className="text-[10px] font-black text-[#e7bd68]">Edit</Text>
+                  </Pressable>
+                </View>
               </View>
             )) : (
               <Text className="rounded-2xl border border-dashed border-[#49433a] p-4 text-sm text-[#85838a]">Belum ada transaksi.</Text>
@@ -3455,7 +3508,10 @@ export default function App() {
           accessibilityRole="button"
           accessibilityLabel="Tambah transaksi keuangan"
           onPress={() => {
+            setEditingFinanceTransaction(null);
             setFinanceFormError('');
+            setFinanceType('income');
+            setFinanceAccountId(finance?.accounts[0]?.id ?? null);
             setIsFinanceModalOpen(true);
           }}
           className="absolute bottom-[78px] right-5 h-14 w-14 items-center justify-center rounded-full border-2 border-[#f5d98e] bg-[#e7bd68] shadow-lg"
@@ -3669,8 +3725,8 @@ export default function App() {
           <View className="rounded-t-[28px] border-t border-[#5a482a] bg-[#242118] px-5 pb-8 pt-5">
             <View className="mb-5 flex-row items-center">
               <View className="flex-1">
-                <Text className="text-xl font-black text-[#f5f0e6]">Tambah transaksi</Text>
-                <Text className="mt-1 text-xs text-[#aaa49a]">Catat pemasukan atau pengeluaran dompetmu.</Text>
+                <Text className="text-xl font-black text-[#f5f0e6]">{editingFinanceTransaction ? 'Edit transaksi' : 'Tambah transaksi'}</Text>
+                <Text className="mt-1 text-xs text-[#aaa49a]">{editingFinanceTransaction ? 'Perbarui catatan transaksi keuanganmu.' : 'Catat pemasukan atau pengeluaran dompetmu.'}</Text>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -3697,6 +3753,24 @@ export default function App() {
                 </Pressable>
               ))}
             </View>
+            {!editingFinanceTransaction ? (
+              <View className="mb-3">
+                <Text className="mb-2 text-[10px] font-black uppercase tracking-[1px] text-[#9c927e]">Akun transaksi</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {(finance?.accounts ?? []).map((account) => (
+                    <Pressable
+                      key={account.id}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: financeAccountId === account.id }}
+                      onPress={() => setFinanceAccountId(account.id)}
+                      className={`rounded-xl border px-3 py-2.5 ${financeAccountId === account.id ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#34353d] bg-[#121318]'}`}
+                    >
+                      <Text className={`text-xs font-bold ${financeAccountId === account.id ? 'text-[#e7bd68]' : 'text-[#85838a]'}`}>{account.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             <TextInput
               value={financeAmount}
               onChangeText={setFinanceAmount}
@@ -3728,7 +3802,7 @@ export default function App() {
               onPress={() => void handleCreateFinanceTransaction()}
               className={`mt-4 items-center rounded-xl py-3 ${isFinanceSaving ? 'bg-[#8e7545]' : 'bg-[#e7bd68]'}`}
             >
-              <Text className="text-xs font-black text-[#211c12]">{isFinanceSaving ? 'Menyimpan...' : 'Simpan transaksi'}</Text>
+              <Text className="text-xs font-black text-[#211c12]">{isFinanceSaving ? 'Menyimpan...' : editingFinanceTransaction ? 'Simpan perubahan' : 'Simpan transaksi'}</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>

@@ -135,8 +135,19 @@ export type FinanceWallet = {
   updated_at?: string;
 };
 
+export type FinanceAccount = {
+  id: number;
+  name: string;
+  type: 'cash' | 'bank' | 'e_wallet' | 'other';
+  balance: number;
+  currency: string;
+  updated_at?: string;
+};
+
 export type FinanceTransaction = {
   id: number;
+  account_id?: number;
+  account_name?: string | null;
   type: 'income' | 'expense';
   amount: number;
   balance_after: number;
@@ -148,6 +159,7 @@ export type FinanceTransaction = {
 
 export type FinanceSummary = {
   wallet: FinanceWallet;
+  accounts: FinanceAccount[];
   totals: { total_income: number; total_expense: number };
 };
 
@@ -472,13 +484,25 @@ export function getFinanceTransactions(token: string, limit = 10) {
 
 export function createFinanceTransaction(
   token: string,
-  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { occurred_at?: string },
+  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { account_id: number; occurred_at?: string },
 ) {
   return request<{
     message: string;
     transaction: FinanceTransaction;
     wallet: FinanceWallet;
   }>('/finance/transactions', { method: 'POST', token, body: data });
+}
+
+export function updateFinanceTransaction(
+  token: string,
+  transactionId: number,
+  data: Pick<FinanceTransaction, 'type' | 'amount' | 'category' | 'description'> & { occurred_at?: string },
+) {
+  return request<{ message: string; wallet: FinanceWallet }>(`/finance/transactions/${transactionId}`, {
+    method: 'PATCH',
+    token,
+    body: data,
+  });
 }
 
 export function getTodos(token: string) {
