@@ -61,3 +61,11 @@ Docs: https://docs.expo.dev/eas/index.md
 - Selesai di branch/PR terpisah: konfigurasi environment, modal form in-app, header profile, navigasi reward skill, onboarding agama, dan detail status streak.
 - Validasi statis `git diff --check` berhasil pada perubahan yang dibuat.
 - Lint dan typecheck belum dapat dijalankan pada mesin ini karena executable Node.js tidak tersedia di PATH; jalankan `npx expo lint` dan `npx tsc --noEmit` setelah Node.js tersedia.
+
+## Standar Pull Request
+
+- Gunakan judul singkat dengan format Conventional Commits.
+- Gunakan struktur sederhana: `Tujuan`, `Perubahan`, `Validasi`, dan `Target`.
+- Jelaskan hanya perubahan yang benar-benar ada di branch tersebut.
+- Cantumkan keterbatasan validasi secara jujur dan jangan menyatakan test lulus jika belum dijalankan.
+- Semua PR fitur dan perbaikan diarahkan ke `local`.
