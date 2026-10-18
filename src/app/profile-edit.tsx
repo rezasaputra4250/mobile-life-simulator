@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateProfile } from '../lib/authApi';
 import { getSessionToken } from '../lib/session';
+import { religions, type Religion } from '../constants/religions';
 import { showFeedbackModal } from '../lib/errorModal';
 
 export default function ProfileEditScreen() {
@@ -16,6 +17,7 @@ export default function ProfileEditScreen() {
   const [position, setPosition] = useState('');
   const [department, setDepartment] = useState('');
   const [bio, setBio] = useState('');
+  const [religion, setReligion] = useState<Religion | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ export default function ProfileEditScreen() {
         setPosition(result.user.profile?.position || '');
         setDepartment(result.user.profile?.department || '');
         setBio(result.user.profile?.bio || '');
+        setReligion(result.user.profile?.religion || null);
       } catch (error) {
         showFeedbackModal(error instanceof Error ? error.message : 'Profil belum dapat dimuat.', 'error');
       }
@@ -47,6 +50,7 @@ export default function ProfileEditScreen() {
       const result = await updateProfile(token, {
         name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim() || null,
         position: position.trim() || null, department: department.trim() || null, bio: bio.trim() || null,
+        religion,
       });
       showFeedbackModal(result.message, 'success');
       router.back();
@@ -83,6 +87,20 @@ export default function ProfileEditScreen() {
       ))}
       <Text className="mb-2 mt-4 text-xs font-bold uppercase tracking-[1px] text-[#aaa49a]">Bio</Text>
       <TextInput value={bio} onChangeText={setBio} placeholder="Ceritakan sedikit tentang dirimu" placeholderTextColor="#77757d" multiline className="min-h-[100px] rounded-xl border border-[#5a482a] bg-[#242118] px-4 py-3 text-[#f5f0e6]" />
+      <Text className="mb-2 mt-4 text-xs font-bold uppercase tracking-[1px] text-[#aaa49a]">Preferensi agama</Text>
+      <View className="gap-2">
+        {religions.map((item) => (
+          <Pressable
+            key={item.value}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: religion === item.value }}
+            onPress={() => setReligion(item.value)}
+            className={`rounded-xl border px-4 py-3 ${religion === item.value ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#5a482a] bg-[#242118]'}`}
+          >
+            <Text className="text-sm font-bold text-[#f5f0e6]">{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
       <Pressable onPress={() => void save()} disabled={isSaving} className="mt-5 items-center rounded-xl bg-[#e7bd68] px-4 py-3">
         <Text className="font-black text-[#211c12]">{isSaving ? 'Menyimpan...' : 'Simpan perubahan'}</Text>
       </Pressable>
