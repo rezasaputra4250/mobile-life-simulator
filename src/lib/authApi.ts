@@ -9,7 +9,7 @@ export type AuthUser = {
   affiliate_code?: string | null;
   referred_by?: number | null;
   class_id?: number | null;
-  difficulty?: Difficulty;
+  difficulty?: Difficulty | null;
   level?: number;
   experience?: number;
   experience_to_next_level?: number;

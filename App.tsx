@@ -1258,7 +1258,6 @@ function getRequiredOnboardingStep(
   const hasClass = Number(user?.class_id || progressionResult?.character?.class_id || 0) > 0;
   if (hasClass) return null;
 
-  // Difficulty has a backend default, so only ask for it when it is truly absent.
   return user?.difficulty ? 'class' : 'difficulty';
 }
 
