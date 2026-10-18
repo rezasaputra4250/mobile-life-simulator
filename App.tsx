@@ -2740,14 +2740,14 @@ export default function App() {
                 {formatCurrency(finance?.wallet.balance ?? 0, finance?.wallet.currency ?? 'IDR')}
               </Text>
             </View>
-            <View className="mb-6 flex-row gap-3">
-              <View className="flex-1 rounded-2xl border border-[#314c3b] bg-[#1d2b22] p-4">
-                <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#8cbf9a]">Pemasukan</Text>
-                <Text className="mt-2 text-sm font-black text-[#d9f0df]">{formatCurrency(finance?.totals.total_income ?? 0)}</Text>
+            <View className="mb-6 flex-row items-stretch gap-3">
+              <View className="min-w-0 flex-1 rounded-2xl border border-[#314c3b] bg-[#1d2b22] p-4">
+                <Text numberOfLines={1} className="text-[10px] font-bold uppercase tracking-[1px] text-[#8cbf9a]">Pemasukan</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className="mt-2 text-sm font-black text-[#d9f0df]">{formatCurrency(finance?.totals.total_income ?? 0)}</Text>
               </View>
-              <View className="flex-1 rounded-2xl border border-[#553536] bg-[#2b2022] p-4">
-                <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#f1a39a]">Pengeluaran</Text>
-                <Text className="mt-2 text-sm font-black text-[#f5d5d0]">{formatCurrency(finance?.totals.total_expense ?? 0)}</Text>
+              <View className="min-w-0 flex-1 rounded-2xl border border-[#553536] bg-[#2b2022] p-4">
+                <Text numberOfLines={1} className="text-[10px] font-bold uppercase tracking-[1px] text-[#f1a39a]">Pengeluaran</Text>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className="mt-2 text-sm font-black text-[#f5d5d0]">{formatCurrency(finance?.totals.total_expense ?? 0)}</Text>
               </View>
             </View>
             <View className="mb-6">
