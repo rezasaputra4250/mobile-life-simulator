@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { ProfilePageHeader } from '../components/ProfilePageHeader';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentUser, updateProfile } from '../lib/authApi';
 import { getSessionToken } from '../lib/session';
+import { showFeedbackModal } from '../lib/errorModal';
 
 export default function ProfileEditScreen() {
   const [token, setToken] = useState<string | null>(null);
@@ -13,7 +15,6 @@ export default function ProfileEditScreen() {
   const [position, setPosition] = useState('');
   const [department, setDepartment] = useState('');
   const [bio, setBio] = useState('');
-  const [message, setMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -30,26 +31,26 @@ export default function ProfileEditScreen() {
         setDepartment(result.user.profile?.department || '');
         setBio(result.user.profile?.bio || '');
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'Profil belum dapat dimuat.');
+        showFeedbackModal(error instanceof Error ? error.message : 'Profil belum dapat dimuat.', 'error');
       }
     })();
   }, []);
 
   async function save() {
     if (!token || !name.trim() || !email.trim()) {
-      setMessage('Nama dan email wajib diisi.');
+      showFeedbackModal('Nama dan email wajib diisi.', 'error');
       return;
     }
     setIsSaving(true);
-    setMessage('');
     try {
       const result = await updateProfile(token, {
         name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim() || null,
         position: position.trim() || null, department: department.trim() || null, bio: bio.trim() || null,
       });
-      setMessage(result.message);
+      showFeedbackModal(result.message, 'success');
+      router.back();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Profil belum dapat diperbarui.');
+      showFeedbackModal(error instanceof Error ? error.message : 'Profil belum dapat diperbarui.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -78,7 +79,6 @@ export default function ProfileEditScreen() {
       <Pressable onPress={() => void save()} disabled={isSaving} className="mt-5 items-center rounded-xl bg-[#e7bd68] px-4 py-3">
         <Text className="font-black text-[#211c12]">{isSaving ? 'Menyimpan...' : 'Simpan perubahan'}</Text>
       </Pressable>
-      {message ? <Text className="mt-4 text-sm font-bold text-[#8cbf9a]">{message}</Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
