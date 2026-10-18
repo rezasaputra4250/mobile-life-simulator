@@ -54,7 +54,7 @@ git switch -c feature/nama-fitur
 
 Pastikan perangkat berikut sudah tersedia:
 
-- Node.js versi 20 atau yang kompatibel dengan workflow CI
+- Node.js versi 24 atau yang kompatibel dengan workflow CI
 - npm
 - Expo SDK 57
 - Expo Go untuk menjalankan aplikasi pada perangkat fisik atau emulator yang sesuai
