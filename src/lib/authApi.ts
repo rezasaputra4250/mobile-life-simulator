@@ -681,11 +681,23 @@ export function getGuilds(token: string) {
   return request<{ message: string; guilds: Guild[]; invitations: GuildInvitation[] }>('/guilds', { token });
 }
 
+export function searchGuilds(token: string, query: string) {
+  return request<{ message: string; guilds: Guild[] }>(`/guilds/search?q=${encodeURIComponent(query)}`, { token });
+}
+
 export function createGuild(token: string, name: string, description?: string, maxMembers = 20) {
   return request<{ message: string; guild: Guild }>('/guilds', {
     method: 'POST',
     token,
     body: { name, description: description || undefined, max_members: maxMembers },
+  });
+}
+
+export function updateGuild(token: string, guildId: number, data: { name: string; description?: string; max_members?: number }) {
+  return request<{ message: string; guild: Guild }>(`/guilds/${guildId}`, {
+    method: 'PATCH',
+    token,
+    body: data,
   });
 }
 

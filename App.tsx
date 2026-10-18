@@ -53,6 +53,7 @@ import {
   getCurrentUser,
   getClasses,
   getGuilds,
+  searchGuilds,
   createGuildMission,
   contributeGuildMission,
   getFriends,
@@ -80,6 +81,7 @@ import {
   searchUsers,
   sendFriendRequest,
   createGuild,
+  updateGuild,
   inviteToGuild,
   respondGuildInvitation,
   createParty,
@@ -1490,6 +1492,12 @@ export default function App() {
   const [newGuildName, setNewGuildName] = useState('');
   const [newGuildDescription, setNewGuildDescription] = useState('');
   const [isGuildFormOpen, setIsGuildFormOpen] = useState(false);
+  const [guildSearchQuery, setGuildSearchQuery] = useState('');
+  const [guildSearchResults, setGuildSearchResults] = useState<Guild[]>([]);
+  const [editingGuildId, setEditingGuildId] = useState<number | null>(null);
+  const [editGuildName, setEditGuildName] = useState('');
+  const [editGuildDescription, setEditGuildDescription] = useState('');
+  const [editGuildMaxMembers, setEditGuildMaxMembers] = useState('20');
   const [guildMissionTitle, setGuildMissionTitle] = useState('');
   const [guildMissionDetail, setGuildMissionDetail] = useState('');
   const [guildMissionDate, setGuildMissionDate] = useState(getLocalDateValue());
@@ -2176,6 +2184,46 @@ export default function App() {
       setSocialError('Guild berhasil dibuat.');
     } catch (error) {
       setSocialError(error instanceof Error ? error.message : 'Guild belum dapat dibuat.');
+    }
+  }
+
+  async function handleSearchGuilds() {
+    if (!authSession || guildSearchQuery.trim().length < 2) {
+      setSocialError('Masukkan minimal 2 karakter untuk mencari guild.');
+      setGuildSearchResults([]);
+      return;
+    }
+    try {
+      const result = await searchGuilds(authSession.token, guildSearchQuery.trim());
+      setGuildSearchResults(result.guilds);
+      setSocialError('');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Pencarian guild gagal.');
+    }
+  }
+
+  async function handleUpdateGuild() {
+    if (!authSession || !editingGuildId) return;
+    if (editGuildName.trim().length < 2) {
+      setSocialError('Nama guild minimal 2 karakter.');
+      return;
+    }
+    const maxMembers = Number(editGuildMaxMembers);
+    if (!maxMembers || maxMembers < 2 || maxMembers > 100) {
+      setSocialError('Kapasitas guild harus antara 2 sampai 100 anggota.');
+      return;
+    }
+    try {
+      await updateGuild(authSession.token, editingGuildId, {
+        name: editGuildName.trim(),
+        description: editGuildDescription.trim() || undefined,
+        max_members: maxMembers,
+      });
+      await refreshSocial();
+      setEditingGuildId(null);
+      setSocialError('Guild berhasil diperbarui.');
+    } catch (error) {
+      setSocialError(error instanceof Error ? error.message : 'Guild belum dapat diperbarui.');
     }
   }
 
@@ -2898,6 +2946,44 @@ export default function App() {
 
             {activeTab === 'Guild' ? (
               <>
+            <View className="mb-6 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+              <Text className="mb-3 text-base font-extrabold text-[#f5f0e6]">Cari guild</Text>
+              <View className="flex-row gap-2">
+                <TextInput
+                  value={guildSearchQuery}
+                  onChangeText={setGuildSearchQuery}
+                  onSubmitEditing={() => void handleSearchGuilds()}
+                  placeholder="Nama atau deskripsi guild"
+                  placeholderTextColor="#77757d"
+                  className="h-11 flex-1 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void handleSearchGuilds()}
+                  className="h-11 items-center justify-center rounded-xl bg-[#e7bd68] px-4"
+                >
+                  <Text className="text-xs font-black text-[#211c12]">Cari</Text>
+                </Pressable>
+              </View>
+              {guildSearchResults.length ? (
+                <View className="mt-3 gap-2">
+                  {guildSearchResults.map((result) => (
+                    <View key={result.id} className="rounded-xl bg-[#24252c] p-3">
+                      <View className="flex-row items-center">
+                        <View className="mr-3 h-9 w-9 items-center justify-center rounded-xl bg-[#3a3020]">
+                          <FontAwesomeIcon icon={faShieldHalved} size={14} color="#e7bd68" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-sm font-bold text-[#f1ede4]">{result.name}</Text>
+                          <Text className="mt-1 text-xs text-[#85838a]">{result.member_count ?? 0}/{result.max_members} anggota</Text>
+                        </View>
+                      </View>
+                      {result.description ? <Text className="mt-2 text-xs leading-5 text-[#aaa49a]">{result.description}</Text> : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
             <View className="mb-6 flex-row items-center justify-between">
               <View>
                 <Text className="text-base font-extrabold text-[#f5f0e6]">Guild saya</Text>
@@ -2986,7 +3072,56 @@ export default function App() {
                           {guild.member_count ?? 0}/{guild.max_members} anggota
                         </Text>
                       </View>
+                      {guild.owner_id === authUser?.id ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => {
+                            setEditingGuildId(guild.id);
+                            setEditGuildName(guild.name);
+                            setEditGuildDescription(guild.description || '');
+                            setEditGuildMaxMembers(String(guild.max_members));
+                            setSocialError('');
+                          }}
+                          className="rounded-lg border border-[#66522c] px-2.5 py-2"
+                        >
+                          <Text className="text-[10px] font-black text-[#e7bd68]">Edit</Text>
+                        </Pressable>
+                      ) : null}
                     </View>
+                    {editingGuildId === guild.id ? (
+                      <View className="mt-4 rounded-xl border border-[#66522c] bg-[#1b1c22] p-3">
+                        <TextInput
+                          value={editGuildName}
+                          onChangeText={setEditGuildName}
+                          placeholder="Nama guild"
+                          placeholderTextColor="#77757d"
+                          className="h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                        />
+                        <TextInput
+                          value={editGuildDescription}
+                          onChangeText={setEditGuildDescription}
+                          placeholder="Deskripsi singkat (opsional)"
+                          placeholderTextColor="#77757d"
+                          className="mt-3 h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                        />
+                        <TextInput
+                          value={editGuildMaxMembers}
+                          onChangeText={setEditGuildMaxMembers}
+                          placeholder="Maksimal anggota"
+                          placeholderTextColor="#77757d"
+                          keyboardType="number-pad"
+                          className="mt-3 h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
+                        />
+                        <View className="mt-3 flex-row gap-2">
+                          <Pressable onPress={() => void handleUpdateGuild()} className="flex-1 items-center rounded-xl bg-[#e7bd68] py-2.5">
+                            <Text className="text-xs font-black text-[#211c12]">Simpan</Text>
+                          </Pressable>
+                          <Pressable onPress={() => setEditingGuildId(null)} className="flex-1 items-center rounded-xl border border-[#34353d] py-2.5">
+                            <Text className="text-xs font-black text-[#aaa49a]">Batal</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : null}
                     {guild.description ? (
                       <Text className="mt-3 text-xs leading-5 text-[#aaa49a]">{guild.description}</Text>
                     ) : null}
