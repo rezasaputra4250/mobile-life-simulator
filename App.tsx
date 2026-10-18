@@ -2052,6 +2052,13 @@ export default function App() {
     setGuildJoinRequests(guildsResult.join_requests || []);
   }
 
+  useEffect(() => {
+    if (!authSession || (activeTab !== 'Guild' && activeTab !== 'Pertemanan')) return;
+    void refreshSocial();
+    // Refresh the social data when the user opens the Guild or Pertemanan page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, authSession?.token]);
+
   async function handleCreateFinanceTransaction() {
     if (!authSession) return;
     const amount = Number(financeAmount.replace(/[^0-9]/g, ''));
