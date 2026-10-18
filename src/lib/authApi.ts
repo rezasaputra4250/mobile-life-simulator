@@ -588,6 +588,9 @@ export type Guild = {
   name: string;
   description?: string | null;
   owner_id: number;
+  level: number;
+  experience: number;
+  experience_to_next_level: number;
   max_members: number;
   member_count?: number;
   members?: GuildMember[];
@@ -697,15 +700,15 @@ export function searchGuilds(token: string, query: string) {
   return request<{ message: string; guilds: Guild[] }>(`/guilds/search?q=${encodeURIComponent(query)}`, { token });
 }
 
-export function createGuild(token: string, name: string, description?: string, maxMembers = 20) {
+export function createGuild(token: string, name: string, description?: string) {
   return request<{ message: string; guild: Guild }>('/guilds', {
     method: 'POST',
     token,
-    body: { name, description: description || undefined, max_members: maxMembers },
+    body: { name, description: description || undefined },
   });
 }
 
-export function updateGuild(token: string, guildId: number, data: { name: string; description?: string; max_members?: number }) {
+export function updateGuild(token: string, guildId: number, data: { name: string; description?: string }) {
   return request<{ message: string; guild: Guild }>(`/guilds/${guildId}`, {
     method: 'PATCH',
     token,

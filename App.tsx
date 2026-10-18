@@ -1501,7 +1501,6 @@ export default function App() {
   const [editingGuildId, setEditingGuildId] = useState<number | null>(null);
   const [editGuildName, setEditGuildName] = useState('');
   const [editGuildDescription, setEditGuildDescription] = useState('');
-  const [editGuildMaxMembers, setEditGuildMaxMembers] = useState('20');
   const [guildMissionTitle, setGuildMissionTitle] = useState('');
   const [guildMissionDetail, setGuildMissionDetail] = useState('');
   const [guildMissionDate, setGuildMissionDate] = useState(getLocalDateValue());
@@ -2245,16 +2244,10 @@ export default function App() {
       setSocialError('Nama guild minimal 2 karakter.');
       return;
     }
-    const maxMembers = Number(editGuildMaxMembers);
-    if (!maxMembers || maxMembers < 2 || maxMembers > 100) {
-      setSocialError('Kapasitas guild harus antara 2 sampai 100 anggota.');
-      return;
-    }
     try {
       await updateGuild(authSession.token, editingGuildId, {
         name: editGuildName.trim(),
         description: editGuildDescription.trim() || undefined,
-        max_members: maxMembers,
       });
       await refreshSocial();
       setEditingGuildId(null);
@@ -3012,7 +3005,7 @@ export default function App() {
                         </View>
                         <View className="flex-1">
                           <Text className="text-sm font-bold text-[#f1ede4]">{result.name}</Text>
-                          <Text className="mt-1 text-xs text-[#85838a]">{result.member_count ?? 0}/{result.max_members} anggota</Text>
+                          <Text className="mt-1 text-xs text-[#85838a]">Lv. {result.level || 1} · {result.member_count ?? 0}/{result.max_members} anggota</Text>
                         </View>
                         <Pressable
                           accessibilityRole="button"
@@ -3146,7 +3139,7 @@ export default function App() {
                       <View className="flex-1">
                         <Text className="text-base font-extrabold text-[#f5f0e6]">{guild.name}</Text>
                         <Text className="mt-1 text-xs text-[#aaa49a]">
-                          {guild.member_count ?? 0}/{guild.max_members} anggota
+                          Lv. {guild.level || 1} · {guild.member_count ?? 0}/{guild.max_members} anggota
                         </Text>
                       </View>
                       {guild.owner_id === authUser?.id ? (
@@ -3156,7 +3149,6 @@ export default function App() {
                             setEditingGuildId(guild.id);
                             setEditGuildName(guild.name);
                             setEditGuildDescription(guild.description || '');
-                            setEditGuildMaxMembers(String(guild.max_members));
                             setSocialError('');
                           }}
                           className="rounded-lg border border-[#66522c] px-2.5 py-2"
@@ -3181,14 +3173,9 @@ export default function App() {
                           placeholderTextColor="#77757d"
                           className="mt-3 h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
                         />
-                        <TextInput
-                          value={editGuildMaxMembers}
-                          onChangeText={setEditGuildMaxMembers}
-                          placeholder="Maksimal anggota"
-                          placeholderTextColor="#77757d"
-                          keyboardType="number-pad"
-                          className="mt-3 h-11 rounded-xl border border-[#34353d] bg-[#121318] px-3 text-sm text-[#f5f0e6]"
-                        />
+                        <Text className="mt-3 text-xs leading-5 text-[#aaa49a]">
+                          Level {guild.level || 1} · XP {guild.experience || 0}/{guild.experience_to_next_level || 100} · Kapasitas {guild.max_members} anggota. Naikkan level guild melalui kontribusi misi untuk menambah kapasitas.
+                        </Text>
                         <View className="mt-3 flex-row gap-2">
                           <Pressable onPress={() => void handleUpdateGuild()} className="flex-1 items-center rounded-xl bg-[#e7bd68] py-2.5">
                             <Text className="text-xs font-black text-[#211c12]">Simpan</Text>
