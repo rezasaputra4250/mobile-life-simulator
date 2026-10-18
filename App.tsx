@@ -285,6 +285,11 @@ function PickerField({
   const [visible, setVisible] = useState(false);
   const displayValue = placeholder || (mode === 'date' ? formatDateValue(value) : formatTimeValue(value));
 
+  function handlePickerChange(_event: unknown, selectedValue?: Date) {
+    if (selectedValue) onChange(selectedValue);
+    if (Platform.OS !== 'ios') setVisible(false);
+  }
+
   return (
     <>
       <Pressable
@@ -298,29 +303,33 @@ function PickerField({
           {displayValue}
         </Text>
       </Pressable>
-      {visible ? (
+      {visible && Platform.OS === 'ios' ? (
         <Modal transparent animationType="fade" visible onRequestClose={() => setVisible(false)}>
           <View className="flex-1 items-center justify-center bg-black/60 px-6">
             <View className="w-full rounded-2xl border border-[#5a482a] bg-[#242118] p-4">
               <DateTimePicker
                 value={value}
                 mode={mode}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(_event, selectedValue) => {
-                  if (selectedValue) onChange(selectedValue);
-                  if (Platform.OS !== 'ios') setVisible(false);
-                }}
+                display="spinner"
+                onChange={handlePickerChange}
                 onDismiss={() => setVisible(false)}
                 textColor="#f5f0e6"
               />
-              {Platform.OS === 'ios' ? (
-                <Pressable onPress={() => setVisible(false)} className="mt-3 items-center rounded-xl bg-[#e7bd68] py-3">
-                  <Text className="text-xs font-black text-[#211c12]">Selesai</Text>
-                </Pressable>
-              ) : null}
+              <Pressable onPress={() => setVisible(false)} className="mt-3 items-center rounded-xl bg-[#e7bd68] py-3">
+                <Text className="text-xs font-black text-[#211c12]">Selesai</Text>
+              </Pressable>
             </View>
           </View>
         </Modal>
+      ) : null}
+      {visible && Platform.OS !== 'ios' ? (
+        <DateTimePicker
+          value={value}
+          mode={mode}
+          display="default"
+          onChange={handlePickerChange}
+          onDismiss={() => setVisible(false)}
+        />
       ) : null}
     </>
   );
