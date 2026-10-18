@@ -46,3 +46,18 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## Log Keputusan Pengembangan
+
+- 2026-10-18 — Alur branch dikunci sebagai `feature/* -> local -> develop -> staging -> main`. Setiap masalah utama dibuat dalam branch dan PR terpisah menuju `local`.
+- 2026-10-18 — Environment aplikasi dipisahkan menjadi `local`, `development`, `staging`, dan `production`. Branch tetap memakai `develop`; environment `development` dipetakan ke branch tersebut. Perpindahan environment dilakukan melalui satu file `.env` lokal, sedangkan `.env.example` menjadi dokumentasi tanpa secret.
+- 2026-10-18 — Form setelah login menggunakan modal, sementara login, register, reset password, dan onboarding tetap menjadi layar penuh. Feedback aksi in-app diarahkan ke modal terpusat.
+- 2026-10-18 — Header profile menggunakan icon back di kiri, judul di tengah, dan icon aksi kontekstual di kanan. Reward skill tetap membuka `/profile/skills`.
+- 2026-10-18 — Pengguna memilih agama saat onboarding sebelum menerima misi agama. Misi umum tetap tersedia untuk semua pengguna.
+- 2026-10-18 — `streak_days` tetap menjadi bagian dari sistem misi. UI menjelaskan hari aktif, tanggal terakhir selesai, kondisi streak bertambah, dan kondisi streak terputus.
+
+## Status Milestone
+
+- Selesai di branch/PR terpisah: konfigurasi environment, modal form in-app, header profile, navigasi reward skill, onboarding agama, dan detail status streak.
+- Validasi statis `git diff --check` berhasil pada perubahan yang dibuat.
+- Lint dan typecheck belum dapat dijalankan pada mesin ini karena executable Node.js tidak tersedia di PATH; jalankan `npx expo lint` dan `npx tsc --noEmit` setelah Node.js tersedia.
