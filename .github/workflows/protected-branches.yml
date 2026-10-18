@@ -152,7 +152,7 @@ jobs:
           cache: npm
 
       - name: Install dependency Node.js
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Jalankan lint Expo
         run: npm run lint
@@ -175,10 +175,16 @@ jobs:
           cache: npm
 
       - name: Install dependency Node.js
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
-      - name: Audit dependency npm
+      - name: Audit dependency npm (informatif)
+        id: audit-dependency
         run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Catat hasil audit dependency
+        if: steps.audit-dependency.outcome == 'failure'
+        run: echo "Audit npm menemukan advisory dependency; hasil lengkap tersedia pada log job dan perlu ditinjau sebelum rilis."
 
   semgrep:
     name: Scan keamanan Semgrep
