@@ -152,7 +152,7 @@ jobs:
           cache: npm
 
       - name: Install dependency Node.js
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Jalankan lint Expo
         run: npm run lint
@@ -175,7 +175,7 @@ jobs:
           cache: npm
 
       - name: Install dependency Node.js
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Audit dependency npm
         run: npm audit --audit-level=high
