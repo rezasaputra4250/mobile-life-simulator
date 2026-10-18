@@ -51,6 +51,7 @@ import {
   ApiError,
   forgotPassword,
   getCurrentUser,
+  updateProfile,
   getClasses,
   getGuilds,
   searchGuilds,
