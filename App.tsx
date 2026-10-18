@@ -51,6 +51,7 @@ import {
   ApiError,
   forgotPassword,
   getCurrentUser,
+  updateProfile,
   getClasses,
   getGuilds,
   searchGuilds,
@@ -117,6 +118,7 @@ import {
 import { HomeMenuCard } from './src/components/HomeMenuCard';
 import { RadarCard, type RadarAxis } from './src/components/RadarChart';
 import { ProfileLanding } from './src/components/ProfileLanding';
+import { religions, type Religion } from './src/constants/religions';
 import {
   clearSessionToken,
   getSessionToken,
@@ -1238,7 +1240,7 @@ function AuthScreen({
   );
 }
 
-type OnboardingStep = 'difficulty' | 'class';
+type OnboardingStep = 'religion' | 'difficulty' | 'class';
 
 function onboardingStorageKey(userId: number) {
   return `rpg_onboarding_completed_${userId}`;
@@ -1257,6 +1259,7 @@ function getRequiredOnboardingStep(
   user: AuthUser | null | undefined,
   progressionResult: Progression | null | undefined,
 ): OnboardingStep | null {
+  if (!user?.profile?.religion) return 'religion';
   const hasClass = Number(user?.class_id || progressionResult?.character?.class_id || 0) > 0;
   if (hasClass) return null;
 
@@ -1273,12 +1276,14 @@ const onboardingDifficultyLabels: Record<Difficulty, string> = {
 function OnboardingScreen({
   token,
   step,
+  onReligionSelected,
   onDifficultySelected,
   onCompleted,
   onBackToLogin,
 }: {
   token: string;
   step: OnboardingStep;
+  onReligionSelected: (religion: Religion) => Promise<void>;
   onDifficultySelected: (difficulty: Difficulty) => Promise<void>;
   onCompleted: () => Promise<void>;
   onBackToLogin: () => Promise<void>;
@@ -1296,6 +1301,7 @@ function OnboardingScreen({
   }[]>([]);
   const [difficultyConfigs, setDifficultyConfigs] = useState<DifficultyConfig[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null);
+  const [selectedReligion, setSelectedReligion] = useState<Religion | null>(null);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -1305,7 +1311,9 @@ function OnboardingScreen({
     let mounted = true;
     void (async () => {
       try {
-        if (step === 'difficulty') {
+        if (step === 'religion') {
+          if (mounted) setIsLoading(false);
+        } else if (step === 'difficulty') {
           const result = await getDifficultyConfigs(token);
           if (mounted) setDifficultyConfigs(result.data);
         } else {
@@ -1322,15 +1330,17 @@ function OnboardingScreen({
   }, [step, token]);
 
   async function continueOnboarding() {
-    const value = step === 'difficulty' ? selectedDifficulty : selectedClass;
+    const value = step === 'religion' ? selectedReligion : step === 'difficulty' ? selectedDifficulty : selectedClass;
     if (!value) {
-      setError(step === 'difficulty' ? 'Pilih difficulty terlebih dahulu.' : 'Pilih class terlebih dahulu.');
+      setError(step === 'religion' ? 'Pilih agama terlebih dahulu.' : step === 'difficulty' ? 'Pilih difficulty terlebih dahulu.' : 'Pilih class terlebih dahulu.');
       return;
     }
     setIsSaving(true);
     setError('');
     try {
-      if (step === 'difficulty') {
+      if (step === 'religion') {
+        await onReligionSelected(value as Religion);
+      } else if (step === 'difficulty') {
         await onDifficultySelected(value as Difficulty);
       } else {
         await selectClass(token, value as number);
@@ -1349,14 +1359,16 @@ function OnboardingScreen({
       <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 26 }}>
         <View className="mb-8 items-center">
           <View className="mb-5 h-[72px] w-[72px] items-center justify-center rounded-[24px] border border-[#66522c] bg-[#282317]">
-            <FontAwesomeIcon icon={step === 'difficulty' ? faCompass : faShieldHalved} size={31} color="#e7bd68" />
+            <FontAwesomeIcon icon={step === 'religion' ? faStar : step === 'difficulty' ? faCompass : faShieldHalved} size={31} color="#e7bd68" />
           </View>
           <Text className="mb-2 text-[11px] font-bold uppercase tracking-[2.5px] text-[#e7bd68]">PERSIAPAN PETUALANG</Text>
           <Text className="text-center text-[27px] font-black text-[#fff8e9]">
-            {step === 'difficulty' ? 'Pilih tingkat tantangan' : 'Pilih class karakter'}
+            {step === 'religion' ? 'Pilih preferensi agama' : step === 'difficulty' ? 'Pilih tingkat tantangan' : 'Pilih class karakter'}
           </Text>
           <Text className="mt-2 text-center text-sm leading-5 text-[#99969c]">
-            {step === 'difficulty'
+            {step === 'religion'
+              ? 'Pilihan ini digunakan untuk menampilkan misi ibadah yang sesuai. Kamu tetap dapat memilih opsi umum.'
+              : step === 'difficulty'
               ? 'Difficulty menentukan reward untuk misi baru. Pilihan ini bisa diubah nanti dari Profil.'
               : 'Class menentukan bonus awal dan arah perkembangan karakter.'}
           </Text>
@@ -1364,6 +1376,21 @@ function OnboardingScreen({
 
         <View className="rounded-[26px] border border-[#34343a] bg-[#17181d] p-5">
           {isLoading ? <Text className="py-8 text-center text-sm text-[#85838a]">Menyiapkan pilihan...</Text> : null}
+          {!isLoading && step === 'religion' ? (
+            <View className="gap-3">
+              {religions.map((religion) => (
+                <Pressable
+                  key={religion.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedReligion === religion.value }}
+                  onPress={() => setSelectedReligion(religion.value)}
+                  className={`rounded-2xl border p-4 ${selectedReligion === religion.value ? 'border-[#e7bd68] bg-[#342b1b]' : 'border-[#2d2e35] bg-[#1b1c22]'}`}
+                >
+                  <Text className="text-base font-black text-[#f5f0e6]">{religion.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           {!isLoading && step === 'difficulty' ? (
             <View className="gap-3">
               {(['easy', 'normal', 'hard', 'expert'] as Difficulty[]).map((difficulty) => (
@@ -1406,7 +1433,7 @@ function OnboardingScreen({
           ) : null}
           {error ? <Text className="mt-4 text-xs leading-5 text-[#f1a39a]">{error}</Text> : null}
           <Pressable onPress={() => void continueOnboarding()} disabled={isSaving || isLoading} className="mt-5 h-14 items-center justify-center rounded-2xl bg-[#d8ad59]">
-            <Text className="text-sm font-black text-[#211b10]">{isSaving ? 'Menyimpan...' : step === 'difficulty' ? 'Lanjut pilih class' : 'Masuk ke beranda'}</Text>
+            <Text className="text-sm font-black text-[#211b10]">{isSaving ? 'Menyimpan...' : step === 'religion' ? 'Lanjut pilih difficulty' : step === 'difficulty' ? 'Lanjut pilih class' : 'Masuk ke beranda'}</Text>
           </Pressable>
         </View>
         <Pressable accessibilityRole="button" onPress={() => void onBackToLogin()} className="mt-6 items-center py-3">
@@ -1833,6 +1860,15 @@ export default function App() {
       // Keep the existing session flow if onboarding status cannot be checked.
       setOnboardingStep(null);
     }
+  }
+
+  async function handleOnboardingReligion(religion: Religion) {
+    if (!authSession) return;
+    await updateProfile(authSession.token, { religion });
+    const profileResult = await getCurrentUser(authSession.token);
+    setAuthUser(profileResult.user);
+    setAuthSession((current) => current ? { ...current, user: profileResult.user } : current);
+    setOnboardingStep('difficulty');
   }
 
   async function handleOnboardingDifficulty(difficulty: Difficulty) {
@@ -2430,6 +2466,7 @@ export default function App() {
       <OnboardingScreen
         token={authSession.token}
         step={onboardingStep}
+        onReligionSelected={handleOnboardingReligion}
         onDifficultySelected={handleOnboardingDifficulty}
         onCompleted={finishOnboarding}
         onBackToLogin={handleLogout}
