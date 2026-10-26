@@ -1,6 +1,8 @@
 import axios, { isAxiosError } from 'axios';
 import { showErrorModal } from './errorModal';
 import Constants from 'expo-constants';
+import type { Religion } from '../constants/religions';
+import { mobileEnvironment } from '../config/environment';
 
 export type AuthUser = {
   id: number;
@@ -20,6 +22,7 @@ export type AuthUser = {
     position?: string | null;
     department?: string | null;
     phone?: string | null;
+    religion?: Religion | null;
     avatar_url?: string | null;
     city?: string | null;
     province?: string | null;
@@ -192,16 +195,22 @@ export class ApiError extends Error {
   }
 }
 
-const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
-const apiPort = process.env.EXPO_PUBLIC_API_PORT || '5000';
+const configuredApiUrl = mobileEnvironment.apiUrl;
+const apiPort = mobileEnvironment.apiPort;
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const discoveredApiUrl = expoHost ? `http://${expoHost}:${apiPort}/api/mobile` : undefined;
 const shouldDiscoverHost = !configuredApiUrl || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/i.test(configuredApiUrl);
-// Support both the current channel URL (/api/mobile) and older local configs (/api).
-const apiBaseUrl = (shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl)?.endsWith('/api')
-  ? `${shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl}/mobile`
-  : (shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl);
-const isApiDebugEnabled = process.env.EXPO_PUBLIC_API_DEBUG === 'true';
+const selectedApiUrl = shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl;
+
+function resolveApiBaseUrl(url: string | undefined) {
+  if (!url) return undefined;
+  if (url.endsWith('/api/mobile')) return url;
+  if (url.endsWith('/api')) return `${url}/mobile`;
+  return `${url}/api/mobile`;
+}
+
+const apiBaseUrl = resolveApiBaseUrl(selectedApiUrl);
+const isApiDebugEnabled = mobileEnvironment.apiDebug;
 
 function redactSensitiveData(value: unknown): unknown {
   if (typeof value === 'string') {
@@ -320,6 +329,7 @@ export type ProfileUpdate = {
   position?: string | null;
   department?: string | null;
   phone?: string | null;
+  religion?: Religion | null;
   bio?: string | null;
 };
 
