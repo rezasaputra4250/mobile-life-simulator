@@ -2,6 +2,7 @@ import axios, { isAxiosError } from 'axios';
 import { showErrorModal } from './errorModal';
 import Constants from 'expo-constants';
 import type { Religion } from '../constants/religions';
+import { mobileEnvironment } from '../config/environment';
 
 export type AuthUser = {
   id: number;
@@ -194,8 +195,8 @@ export class ApiError extends Error {
   }
 }
 
-const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
-const apiPort = process.env.EXPO_PUBLIC_API_PORT || '5000';
+const configuredApiUrl = mobileEnvironment.apiUrl;
+const apiPort = mobileEnvironment.apiPort;
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const discoveredApiUrl = expoHost ? `http://${expoHost}:${apiPort}/api/mobile` : undefined;
 const shouldDiscoverHost = !configuredApiUrl || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/i.test(configuredApiUrl);
@@ -203,7 +204,7 @@ const shouldDiscoverHost = !configuredApiUrl || /^https?:\/\/(localhost|127\.0\.
 const apiBaseUrl = (shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl)?.endsWith('/api')
   ? `${shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl}/mobile`
   : (shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl);
-const isApiDebugEnabled = process.env.EXPO_PUBLIC_API_DEBUG === 'true';
+const isApiDebugEnabled = mobileEnvironment.apiDebug;
 
 function redactSensitiveData(value: unknown): unknown {
   if (typeof value === 'string') {
