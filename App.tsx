@@ -1418,6 +1418,8 @@ function OnboardingScreen({
 export default function App() {
   const [missions, setMissions] = useState(initialMissions);
   const [streakDays, setStreakDays] = useState(0);
+  const [lastCompletedDate, setLastCompletedDate] = useState<string | null>(null);
+  const [streakStatus, setStreakStatus] = useState<'active' | 'pending' | 'broken' | 'none'>('none');
   const [activeTab, setActiveTab] = useState('Beranda');
   const [isGuest, setIsGuest] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
@@ -1433,6 +1435,12 @@ export default function App() {
   const [missionError, setMissionError] = useState('');
   const [isMissionLoading, setIsMissionLoading] = useState(false);
   const [hasLoadedMissions, setHasLoadedMissions] = useState(false);
+
+  function applyMissionStats(stats?: { streak_days: number; last_completed_date: string | null; status: 'active' | 'pending' | 'broken' | 'none' }) {
+    setStreakDays(stats?.streak_days ?? 0);
+    setLastCompletedDate(stats?.last_completed_date ?? null);
+    setStreakStatus(stats?.status ?? 'none');
+  }
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [unlockedSkill, setUnlockedSkill] = useState<MissionReward | null>(null);
   const [missionFrequency, setMissionFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -1616,7 +1624,7 @@ export default function App() {
         const result = await getMissions(token);
         if (isMounted) {
           setMissions(result.missions);
-          setStreakDays(result.stats?.streak_days ?? 0);
+          applyMissionStats(result.stats);
           setMissionError('');
         }
       } catch (error) {
@@ -1676,7 +1684,7 @@ export default function App() {
       setAuthUser(profileResult.user);
       setProgression(progressionResult.data);
       setMissions(missionsResult.missions);
-      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      applyMissionStats(missionsResult.stats);
       setMissionError('');
     }).catch(() => {
       // The existing dashboard data remains visible if a focus refresh fails.
@@ -1899,7 +1907,7 @@ export default function App() {
     setTodoTitle('');
     setTodoDescription('');
     setTodoDueDate('');
-    setStreakDays(0);
+    applyMissionStats();
     setFriends([]);
     setFriendRequests([]);
     setParties([]);
@@ -1924,7 +1932,7 @@ export default function App() {
       setTodos((current) => [...current, result.todo]);
       const missionsResult = await getMissions(authSession.token);
       setMissions(missionsResult.missions);
-      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      applyMissionStats(missionsResult.stats);
       setTodoTitle('');
       setTodoDescription('');
       setTodoDueDate('');
@@ -1948,7 +1956,7 @@ export default function App() {
       });
       const missionsResult = await getMissions(authSession.token);
       setMissions(missionsResult.missions);
-      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      applyMissionStats(missionsResult.stats);
       setPersonalMissionTitle('');
       setPersonalMissionDetail('');
       setPersonalMissionDate(getLocalDateValue());
@@ -1969,7 +1977,7 @@ export default function App() {
       setTodos((current) => current.map((item) => (item.id === todo.id ? result.todo : item)));
       const missionsResult = await getMissions(authSession.token);
       setMissions(missionsResult.missions);
-      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      applyMissionStats(missionsResult.stats);
       setTodoError('');
     } catch (error) {
       setTodoError(error instanceof Error ? error.message : 'Status to-do gagal diperbarui.');
@@ -1983,7 +1991,7 @@ export default function App() {
       setTodos((current) => current.filter((todo) => todo.id !== todoId));
       const missionsResult = await getMissions(authSession.token);
       setMissions(missionsResult.missions);
-      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      applyMissionStats(missionsResult.stats);
       setTodoError('');
     } catch (error) {
       setTodoError(error instanceof Error ? error.message : 'To-do gagal dihapus.');
@@ -2363,7 +2371,7 @@ export default function App() {
           setAuthUser(profileResult.user);
           setInventory(inventoryResult);
           setMissions(missionsResult.missions);
-          setStreakDays(missionsResult.stats?.streak_days ?? 0);
+          applyMissionStats(missionsResult.stats);
           setExperienceHistory(historyResult.data);
           setProgression(progressionResult.data);
         } catch (error) {
@@ -2404,7 +2412,7 @@ export default function App() {
       setAuthUser(profileResult.user);
       setInventory(inventoryResult);
       setMissions(missionsResult.missions);
-      setStreakDays(missionsResult.stats?.streak_days ?? 0);
+      applyMissionStats(missionsResult.stats);
       setExperienceHistory(historyResult.data);
       setProgression(progressionResult.data);
       setMissionError('');
@@ -2938,12 +2946,26 @@ export default function App() {
               </View>
             )}
 
-            <View className="mt-6 flex-row items-center rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
-              <FontAwesomeIcon icon={faFire} size={17} color="#e87959" />
-              <Text className="ml-3 flex-1 text-sm text-[#c5beb0]">Konsistensi petualangan</Text>
-              <Text className="text-sm font-extrabold text-[#f5f0e6]">
-                {streakDays ? `${streakDays} hari berturut-turut` : 'Belum ada konsistensi'}
+            <View className="mt-6 rounded-2xl border border-[#2d2e35] bg-[#1b1c22] p-4">
+              <View className="flex-row items-center">
+                <FontAwesomeIcon icon={faFire} size={17} color="#e87959" />
+                <Text className="ml-3 flex-1 text-sm font-bold text-[#c5beb0]">Streak misi</Text>
+                <Text className="text-sm font-extrabold text-[#f5f0e6]">
+                  {streakDays ? `${streakDays} hari aktif` : 'Belum aktif'}
+                </Text>
+              </View>
+              <Text className="mt-3 text-xs leading-5 text-[#929097]">
+                {streakStatus === 'active'
+                  ? 'Selesaikan semua misi harian untuk melanjutkan streak.'
+                  : streakStatus === 'broken'
+                    ? 'Streak terputus karena ada misi gagal atau hari terlewat.'
+                    : streakStatus === 'pending'
+                      ? 'Selesaikan misi hari ini untuk memulai atau melanjutkan streak.'
+                      : 'Belum ada hari misi yang selesai penuh.'}
               </Text>
+              {lastCompletedDate ? (
+                <Text className="mt-2 text-xs font-semibold text-[#d8ad59]">Terakhir selesai: {lastCompletedDate}</Text>
+              ) : null}
             </View>
           </>
         ) : activeTab === 'Guild' || activeTab === 'Pertemanan' ? (

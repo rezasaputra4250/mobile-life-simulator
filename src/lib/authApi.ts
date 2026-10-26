@@ -370,7 +370,11 @@ export function getCurrentUser(token: string) {
 }
 
 export function getMissions(token: string) {
-  return request<{ message: string; missions: Mission[]; stats?: { streak_days: number } }>('/missions', { token });
+  return request<{
+    message: string;
+    missions: Mission[];
+    stats?: { streak_days: number; last_completed_date: string | null; status: 'active' | 'pending' | 'broken' | 'none' };
+  }>('/missions', { token });
 }
 
 export type PlayerClass = {
