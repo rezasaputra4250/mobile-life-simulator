@@ -106,6 +106,13 @@ EXPO_PUBLIC_APP_ENV=staging
 EXPO_PUBLIC_API_URL_STAGING=https://staging-api.example.com/api/mobile
 ```
 
+Untuk production, gunakan:
+
+```dotenv
+EXPO_PUBLIC_APP_ENV=production
+EXPO_PUBLIC_API_URL_PRODUCTION=https://api-life-simulator.rezasaputra.id/
+```
+
 Jangan commit file `.env` atau credential asli.
 
 Pemetaan environment aplikasi:

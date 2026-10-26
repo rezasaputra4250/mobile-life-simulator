@@ -200,10 +200,16 @@ const apiPort = mobileEnvironment.apiPort;
 const expoHost = Constants.expoConfig?.hostUri?.split(':')[0];
 const discoveredApiUrl = expoHost ? `http://${expoHost}:${apiPort}/api/mobile` : undefined;
 const shouldDiscoverHost = !configuredApiUrl || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/i.test(configuredApiUrl);
-// Support both the current channel URL (/api/mobile) and older local configs (/api).
-const apiBaseUrl = (shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl)?.endsWith('/api')
-  ? `${shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl}/mobile`
-  : (shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl);
+const selectedApiUrl = shouldDiscoverHost ? discoveredApiUrl : configuredApiUrl;
+
+function resolveApiBaseUrl(url: string | undefined) {
+  if (!url) return undefined;
+  if (url.endsWith('/api/mobile')) return url;
+  if (url.endsWith('/api')) return `${url}/mobile`;
+  return `${url}/api/mobile`;
+}
+
+const apiBaseUrl = resolveApiBaseUrl(selectedApiUrl);
 const isApiDebugEnabled = mobileEnvironment.apiDebug;
 
 function redactSensitiveData(value: unknown): unknown {
